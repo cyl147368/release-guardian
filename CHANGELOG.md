@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented in this file.
 
+## 2.0.0 - 2026-06-18
+
+### Added
+
+- Pagination metadata in list responses: `total`, `limit`, `offset`, `hasMore`
+- Request body size limiting middleware (413 Payload Too Large)
+- Content-Type validation middleware (415 Unsupported Media Type)
+- `MAX_BODY_BYTES` environment variable for body size limit configuration
+- Pagination schema and 413/415 responses in OpenAPI contract
+- 8 new tests for body size limit, content-type validation, and pagination metadata (129 total)
+
+### Changed
+
+- **BREAKING**: `GET /api/releases` response now includes `pagination` object alongside `data` array
+- Bootstrap middleware pipeline extended with content-type validation and body size limit
+- OpenAPI contract expanded with Pagination schema and new error responses
+
 ## 1.9.0 - 2026-06-18
 
 ### Added

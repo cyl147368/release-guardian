@@ -67,7 +67,7 @@ test("GET /ready returns structured readiness payload", async () => {
 
   assert.equal(response.statusCode, 200);
   assert.equal(body.data.status, "ready");
-  assert.equal(body.data.version, "1.9.0");
+  assert.equal(body.data.version, "2.0.0");
   assert.equal(body.data.checks.datastore.status, "ok");
 });
 
@@ -77,7 +77,7 @@ test("GET /ready returns 503 when readiness checks fail", async () => {
       return {
         status: "not_ready",
         generatedAt: "2026-06-18T00:00:00.000Z",
-        version: "1.9.0",
+        version: "2.0.0",
         checks: {
           datastore: {
             status: "error",
@@ -125,6 +125,9 @@ test("GET /api/releases supports filters", async () => {
   assert.equal(response.statusCode, 200);
   assert.equal(body.data.length, 1);
   assert.equal(body.data[0].application, "ops-portal");
+  assert.ok(body.pagination);
+  assert.equal(body.pagination.total, 1);
+  assert.equal(body.pagination.hasMore, false);
 });
 
 test("GET /api/releases rejects invalid pagination", async () => {

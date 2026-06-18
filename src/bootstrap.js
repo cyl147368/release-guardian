@@ -5,6 +5,8 @@ import { sendResponse } from "./lib/http.js";
 import { createLogger } from "./lib/logger.js";
 import {
   withApiKeyAuth,
+  withBodySizeLimit,
+  withContentTypeValidation,
   withCors,
   withRateLimit,
   withRequestLogging,
@@ -27,15 +29,18 @@ export function createRuntime({
   rateLimitWindowMs = Number(process.env.RATE_LIMIT_WINDOW_MS || 60_000),
   apiKeys = process.env.API_KEYS ? process.env.API_KEYS.split(",").map((k) => k.trim()).filter(Boolean) : [],
   corsOrigin = process.env.CORS_ORIGIN || "*",
-  enableSecurityHeaders = process.env.SECURITY_HEADERS !== "false"
+  enableSecurityHeaders = process.env.SECURITY_HEADERS !== "false",
+  maxBodyBytes = Number(process.env.MAX_BODY_BYTES || 1048576)
 } = {}) {
   let app = createApp(service);
 
-  // Layer middleware: security → cors → auth → rate limit → logging → app
+  // 中间件管道：安全头 → CORS → 内容类型验证 → 请求体限制 → 认证 → 速率限制 → 请求日志 → 应用
   if (enableSecurityHeaders) {
     app = withSecurityHeaders(app);
   }
   app = withCors(app, { allowOrigin: corsOrigin });
+  app = withContentTypeValidation(app);
+  app = withBodySizeLimit(app, { maxBytes: maxBodyBytes });
   if (apiKeys.length > 0) {
     app = withApiKeyAuth(app, { apiKeys });
   }
@@ -49,7 +54,7 @@ export function createRuntime({
     sendResponse(response, payload);
   });
 
-  // Graceful shutdown handler
+  // 优雅关闭处理
   let shuttingDown = false;
 
   function gracefulShutdown(signal) {
@@ -62,7 +67,7 @@ export function createRuntime({
       process.exit(0);
     });
 
-    // Force exit after 10 seconds
+    // 10 秒后强制退出
     setTimeout(() => {
       structuredLogger.error("shutdown_forced", { signal });
       process.exit(1);

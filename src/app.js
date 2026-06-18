@@ -18,8 +18,16 @@ export function createApp(service) {
       }
 
       if (request.method === "GET" && url.pathname === "/api/releases") {
-        const releases = await service.listReleases(Object.fromEntries(url.searchParams));
-        return jsonResponse(200, { data: releases }, { etag: etagFor(releases) });
+        const result = await service.listReleases(Object.fromEntries(url.searchParams));
+        return jsonResponse(200, {
+          data: result.items,
+          pagination: {
+            total: result.total,
+            limit: result.limit,
+            offset: result.offset,
+            hasMore: result.hasMore
+          }
+        }, { etag: etagFor(result) });
       }
 
       if (request.method === "POST" && url.pathname === "/api/releases") {

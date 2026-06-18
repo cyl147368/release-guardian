@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Release Guardian API
-  version: 1.9.0
+  version: 2.0.0
   description: Enterprise-grade release governance and audit API.
 servers:
   - url: http://localhost:3000
@@ -483,6 +483,18 @@ components:
           schema:
             type: integer
           description: Unix timestamp when the window resets.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    UnsupportedMediaType:
+      description: Content-Type header is not supported.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    PayloadTooLarge:
+      description: Request body exceeds the maximum allowed size.
       content:
         application/json:
           schema:
@@ -1254,6 +1266,8 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/Release"
+            pagination:
+              $ref: "#/components/schemas/Pagination"
     EvidencePackageResponse:
       allOf:
         - $ref: "#/components/schemas/ApiEnvelope"
@@ -1396,6 +1410,22 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/WebhookEvent"
+    Pagination:
+      type: object
+      required: [total, limit, offset, hasMore]
+      properties:
+        total:
+          type: integer
+          description: Total number of items matching the query.
+        limit:
+          type: integer
+          description: Maximum items per page.
+        offset:
+          type: integer
+          description: Offset from the start of the result set.
+        hasMore:
+          type: boolean
+          description: Whether more items exist beyond this page.
     Readiness:
       type: object
       required: [status, generatedAt, version, checks]

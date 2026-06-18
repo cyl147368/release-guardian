@@ -61,7 +61,7 @@ test("getReadiness reports datastore health and service metadata", async () => {
   const readiness = await service.getReadiness();
 
   assert.equal(readiness.status, "ready");
-  assert.equal(readiness.version, "1.9.0");
+  assert.equal(readiness.version, "2.0.0");
   assert.equal(readiness.checks.datastore.status, "ok");
   assert.equal(readiness.checks.datastore.releaseCount, 0);
   assert.equal(readiness.checks.datastore.teamCount, 3);
@@ -230,10 +230,10 @@ test("listReleases filters by environment, status, application, owner, and risk 
     riskBand: "low"
   });
 
-  assert.equal(production.length, 1);
-  assert.equal(production[0].environment, "production");
-  assert.equal(approvedDocs.length, 1);
-  assert.equal(approvedDocs[0].application, "docs-site");
+  assert.equal(production.items.length, 1);
+  assert.equal(production.items[0].environment, "production");
+  assert.equal(approvedDocs.items.length, 1);
+  assert.equal(approvedDocs.items[0].application, "docs-site");
 });
 
 test("listReleases supports pagination, sorting, and pending approval filters", async () => {
@@ -279,10 +279,10 @@ test("listReleases supports pagination, sorting, and pending approval filters", 
     offset: "1"
   });
 
-  assert.equal(pending.length, 1);
-  assert.equal(pending[0].id, critical.id);
-  assert.equal(secondPage.length, 1);
-  assert.equal(secondPage[0].application, "docs-site");
+  assert.equal(pending.items.length, 1);
+  assert.equal(pending.items[0].id, critical.id);
+  assert.equal(secondPage.items.length, 1);
+  assert.equal(secondPage.items[0].application, "docs-site");
 });
 
 test("listReleases rejects invalid query controls", async () => {
@@ -505,4 +505,36 @@ test("deployRelease records deployment outcome and dashboard metrics", async () 
   assert.equal(dashboard.totalReleases, 1);
   assert.equal(dashboard.byStatus.deployed, 1);
   assert.equal(dashboard.changeFailureRate, 0);
+});
+
+test("listReleases returns pagination metadata", async () => {
+  const repository = await createFixtureRepository();
+  let tick = 0;
+  const service = new ReleaseService(repository, () =>
+    new Date(Date.UTC(2026, 5, 18, 0, tick++, 0)).toISOString()
+  );
+
+  for (let i = 0; i < 5; i++) {
+    await service.createRelease({
+      ...buildPayload(),
+      application: `app-${i}`,
+      version: `${i}.0.0`
+    });
+  }
+
+  const firstPage = await service.listReleases({ limit: "2", offset: "0" });
+  assert.equal(firstPage.items.length, 2);
+  assert.equal(firstPage.total, 5);
+  assert.equal(firstPage.limit, 2);
+  assert.equal(firstPage.offset, 0);
+  assert.equal(firstPage.hasMore, true);
+
+  const lastPage = await service.listReleases({ limit: "2", offset: "4" });
+  assert.equal(lastPage.items.length, 1);
+  assert.equal(lastPage.total, 5);
+  assert.equal(lastPage.hasMore, false);
+
+  const allItems = await service.listReleases({ limit: "100", offset: "0" });
+  assert.equal(allItems.items.length, 5);
+  assert.equal(allItems.hasMore, false);
 });

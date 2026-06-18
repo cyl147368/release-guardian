@@ -22,7 +22,7 @@ const RELEASE_STATUS = [
   "rolled_back"
 ];
 const APPROVAL_STATUS = ["pending", "approved", "rejected"];
-const SERVICE_VERSION = "1.9.0";
+const SERVICE_VERSION = "2.0.0";
 
 export class ReleaseService {
   constructor(repository, clock = nowIso, webhookManager = null) {
@@ -34,11 +34,19 @@ export class ReleaseService {
   async listReleases(filters = {}) {
     const query = normalizeReleaseFilters(filters);
     const db = await this.repository.load();
-    return db.releases
+    const filtered = db.releases
       .map((release) => refreshApprovalSla(release, this.clock()))
       .filter((release) => matchesReleaseFilters(release, query))
-      .sort((left, right) => compareReleases(left, right, query.sort, query.order))
-      .slice(query.offset, query.offset + query.limit);
+      .sort((left, right) => compareReleases(left, right, query.sort, query.order));
+    const total = filtered.length;
+    const items = filtered.slice(query.offset, query.offset + query.limit);
+    return {
+      items,
+      total,
+      limit: query.limit,
+      offset: query.offset,
+      hasMore: query.offset + query.limit < total
+    };
   }
 
   async getReadiness() {

@@ -227,3 +227,65 @@ describe("withSecurityHeaders", () => {
     assert.equal(res.headers["x-content-type-options"], "nosniff");
   });
 });
+
+describe("withBodySizeLimit", () => {
+  it("allows requests without Content-Length header", async () => {
+    const { withBodySizeLimit } = await import("../src/lib/middleware.js");
+    const app = withBodySizeLimit(okApp());
+    const res = await app(fakeRequest());
+    assert.equal(res.statusCode, 200);
+  });
+
+  it("allows requests within the size limit", async () => {
+    const { withBodySizeLimit } = await import("../src/lib/middleware.js");
+    const app = withBodySizeLimit(okApp(), { maxBytes: 1024 });
+    const req = fakeRequest("POST", "/api/releases", { "content-length": "500" });
+    const res = await app(req);
+    assert.equal(res.statusCode, 200);
+  });
+
+  it("rejects requests exceeding the size limit", async () => {
+    const { withBodySizeLimit } = await import("../src/lib/middleware.js");
+    const app = withBodySizeLimit(okApp(), { maxBytes: 1024 });
+    const req = fakeRequest("POST", "/api/releases", { "content-length": "2048" });
+    const res = await app(req);
+    assert.equal(res.statusCode, 413);
+    const body = JSON.parse(res.body);
+    assert.equal(body.error.code, "payload_too_large");
+  });
+});
+
+describe("withContentTypeValidation", () => {
+  it("allows GET requests without Content-Type", async () => {
+    const { withContentTypeValidation } = await import("../src/lib/middleware.js");
+    const app = withContentTypeValidation(okApp());
+    const res = await app(fakeRequest("GET", "/api/releases"));
+    assert.equal(res.statusCode, 200);
+  });
+
+  it("allows POST with application/json", async () => {
+    const { withContentTypeValidation } = await import("../src/lib/middleware.js");
+    const app = withContentTypeValidation(okApp());
+    const req = fakeRequest("POST", "/api/releases", { "content-type": "application/json" });
+    const res = await app(req);
+    assert.equal(res.statusCode, 200);
+  });
+
+  it("rejects POST with unsupported Content-Type", async () => {
+    const { withContentTypeValidation } = await import("../src/lib/middleware.js");
+    const app = withContentTypeValidation(okApp());
+    const req = fakeRequest("POST", "/api/releases", { "content-type": "text/plain" });
+    const res = await app(req);
+    assert.equal(res.statusCode, 415);
+    const body = JSON.parse(res.body);
+    assert.equal(body.error.code, "unsupported_media_type");
+  });
+
+  it("allows POST with application/json including charset", async () => {
+    const { withContentTypeValidation } = await import("../src/lib/middleware.js");
+    const app = withContentTypeValidation(okApp());
+    const req = fakeRequest("POST", "/api/releases", { "content-type": "application/json; charset=utf-8" });
+    const res = await app(req);
+    assert.equal(res.statusCode, 200);
+  });
+});

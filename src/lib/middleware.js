@@ -230,3 +230,58 @@ export function withSecurityHeaders(app, { csp = "default-src 'none'" } = {}) {
     return payload;
   };
 }
+
+
+/**
+ * Limits request body size to prevent denial-of-service.
+ * Rejects requests with Content-Length exceeding the configured maximum.
+ */
+export function withBodySizeLimit(app, { maxBytes = 1024 * 1024 } = {}) {
+  return async function bodyLimitedApp(request) {
+    const contentLength = request.headers?.["content-length"];
+    if (contentLength && Number(contentLength) > maxBytes) {
+      return {
+        statusCode: 413,
+        headers: {
+          "content-type": "application/json; charset=utf-8"
+        },
+        body: JSON.stringify({
+          error: {
+            code: "payload_too_large",
+            message: `Request body must not exceed ${maxBytes} bytes.`
+          }
+        })
+      };
+    }
+    return app(request);
+  };
+}
+
+/**
+ * Validates Content-Type header for write operations (POST, PUT, PATCH).
+ */
+export function withContentTypeValidation(app, {
+  allowedTypes = ["application/json"]
+} = {}) {
+  return async function ctValidApp(request) {
+    if (["POST", "PUT", "PATCH"].includes(request.method)) {
+      const ct = request.headers?.["content-type"] || "";
+      const baseType = ct.split(";")[0].trim().toLowerCase();
+      if (baseType && !allowedTypes.includes(baseType)) {
+        return {
+          statusCode: 415,
+          headers: {
+            "content-type": "application/json; charset=utf-8"
+          },
+          body: JSON.stringify({
+            error: {
+              code: "unsupported_media_type",
+              message: `Content-Type must be one of: ${allowedTypes.join(", ")}.`
+            }
+          })
+        };
+      }
+    }
+    return app(request);
+  };
+}
