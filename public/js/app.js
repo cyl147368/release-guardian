@@ -225,8 +225,84 @@ async function loadDashboard() {
 
     // 风险分布图表
     renderRiskChart(data.byRiskBand || {});
+    
+    // 发布流程可视化
+    renderReleaseFlow(data.byStatus || {});
+    
+    // 最近活动
+    loadRecentActivity();
   } catch (e) {
     console.error("仪表板加载失败:", e);
+  }
+}
+
+function renderReleaseFlow(byStatus) {
+  const flow = document.getElementById("release-flow");
+  if (!flow) return;
+  
+  const statusConfig = {
+    draft: { label: "草稿", color: "var(--text-muted)", icon: "M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" },
+    pending_approval: { label: "待审批", color: "var(--status-warn)", icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
+    approved: { label: "已批准", color: "var(--status-ok)", icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" },
+    rejected: { label: "已拒绝", color: "var(--status-error)", icon: "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" },
+    scheduled: { label: "已排期", color: "var(--status-info)", icon: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" },
+    deployed: { label: "已部署", color: "var(--status-sync)", icon: "M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" },
+    rolled_back: { label: "已回滚", color: "var(--status-error)", icon: "M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" }
+  };
+  
+  const allStatuses = ["draft", "pending_approval", "approved", "scheduled", "deployed", "rolled_back"];
+  
+  flow.innerHTML = allStatuses.map(status => {
+    const count = byStatus[status] || 0;
+    const config = statusConfig[status] || { label: status, color: "var(--text-muted)", icon: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" };
+    
+    return `
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px; background: var(--bg-raised); border-radius: 12px; border: 1px solid var(--border-subtle); transition: all 0.2s var(--ease-out); cursor: pointer;" 
+           onclick="loadReleases('${status}')"
+           onmouseover="this.style.borderColor='${config.color}'; this.style.transform='translateY(-2px)'"
+           onmouseout="this.style.borderColor='var(--border-subtle)'; this.style.transform='translateY(0)'">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${config.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="${config.icon}"/>
+        </svg>
+        <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">${count}</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted);">${config.label}</div>
+      </div>
+    `;
+  }).join("");
+}
+
+async function loadRecentActivity() {
+  try {
+    const { data } = await apiFetch("/api/releases?limit=5&sort=updatedAt&order=desc");
+    
+    const container = document.getElementById("recent-activity");
+    if (!data || data.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 20px; color: var(--text-muted);">
+          暂无最近活动
+        </div>`;
+      return;
+    }
+    
+    container.innerHTML = data.map(r => `
+      <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg-raised); border-radius: 8px; cursor: pointer; transition: all 0.2s var(--ease-out);"
+           onclick="showReleaseDetail('${r.id}')"
+           onmouseover="this.style.background='var(--quantum-subtle)'"
+           onmouseout="this.style.background='var(--bg-raised)'">
+        <div style="width: 8px; height: 8px; border-radius: 50; background: var(--quantum-primary); flex-shrink: 0;"></div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            ${escapeHtml(r.application)} v${escapeHtml(r.version)}
+          </div>
+          <div style="font-size: 0.85rem; color: var(--text-muted);">
+            ${r.environment} • ${formatDate(r.updatedAt)}
+          </div>
+        </div>
+        <span class="status-badge status-${r.status}">${r.status}</span>
+      </div>
+    `).join("");
+  } catch (e) {
+    console.warn("最近活动加载失败:", e);
   }
 }
 
