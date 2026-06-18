@@ -1,0 +1,25 @@
+import { readFile, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const DATA_PATH = join(__dirname, "..", "data", "seed.json");
+
+export class Repository {
+  constructor(filePath = DATA_PATH) {
+    this.filePath = filePath;
+    this._writeQueue = Promise.resolve();
+  }
+
+  async load() {
+    const raw = await readFile(this.filePath, "utf8");
+    return JSON.parse(raw);
+  }
+
+  async save(data) {
+    this._writeQueue = this._writeQueue.then(() =>
+      writeFile(this.filePath, `${JSON.stringify(data, null, 2)}\n`, "utf8")
+    );
+    return this._writeQueue;
+  }
+}

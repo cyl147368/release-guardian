@@ -1,0 +1,79 @@
+openapi: 3.1.0
+info:
+  title: Release Guardian API
+  version: 1.0.0
+  description: Enterprise-grade release governance and audit API.
+servers:
+  - url: http://localhost:3000
+paths:
+  /health:
+    get:
+      summary: Health probe
+      responses:
+        "200":
+          description: Healthy
+  /api/releases:
+    get:
+      summary: List releases
+      responses:
+        "200":
+          description: Release list
+    post:
+      summary: Create a release
+      responses:
+        "201":
+          description: Created
+  /api/releases/{releaseId}:
+    get:
+      summary: Get release by ID
+      parameters:
+        - in: path
+          name: releaseId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Release payload
+  /api/releases/{releaseId}/approvals:
+    post:
+      summary: Approve or reject a release
+      parameters:
+        - in: path
+          name: releaseId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated release
+  /api/releases/{releaseId}/schedule:
+    post:
+      summary: Schedule an approved release
+      parameters:
+        - in: path
+          name: releaseId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Scheduled release
+  /api/releases/{releaseId}/deploy:
+    post:
+      summary: Record deployment outcome
+      parameters:
+        - in: path
+          name: releaseId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deployment result
+  /api/dashboard:
+    get:
+      summary: Retrieve governance dashboard
+      responses:
+        "200":
+          description: Dashboard payload

@@ -1,0 +1,26 @@
+{
+  "name": "release-guardian",
+  "version": "1.0.0",
+  "description": "Enterprise-grade release governance API with risk scoring, approval orchestration, and audit reporting.",
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test",
+    "test:coverage": "node --test --experimental-test-coverage",
+    "lint": "node --check src/server.js && node --check src/app.js && node --check src/repository.js && node --check src/services/releaseService.js && node --check src/lib/http.js && node --check src/lib/validation.js && node --check src/lib/time.js && node --check scripts/seed-demo.js"
+  },
+  "keywords": [
+    "release",
+    "governance",
+    "audit",
+    "risk",
+    "enterprise"
+  ],
+  "author": "",
+  "license": "MIT"
+}
