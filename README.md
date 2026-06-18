@@ -321,6 +321,46 @@ Removes a webhook subscription.
 Returns the webhook event delivery log with pagination (`limit`, `offset`).
 
 
+## 7.2 Deployment
+
+### Docker
+
+```bash
+# Build and run
+docker build -t release-guardian:latest .
+docker run -p 3000:3000 release-guardian:latest
+
+# Or use docker-compose
+docker compose up              # Production mode
+docker compose up dev          # Development mode with hot-reload
+```
+
+### Kubernetes (Kustomize)
+
+```bash
+# Staging
+kubectl apply -k k8s/overlays/staging
+
+# Production
+kubectl apply -k k8s/overlays/production
+```
+
+### Kubernetes (Helm)
+
+```bash
+helm install release-guardian helm/release-guardian \
+  --set image.tag=1.7.0 \
+  --set config.logLevel=info \
+  --set secrets.apiKeys=my-secret-key
+```
+
+### Benchmarking
+
+```bash
+node scripts/benchmark.js --url http://localhost:3000 --concurrency 20 --duration 30
+```
+
+
 ## 8. Error Model
 
 All JSON errors share a common structure:
@@ -655,20 +695,44 @@ Additional detailed documentation is provided below so globally distributed team
 
 ```text
 release-guardian/
+├── .dockerignore
 ├── .github/workflows/ci.yml
 ├── data/seed.json
-├── docs/
+├── docker-compose.yml
 ├── Dockerfile
+├── docs/
+│   ├── DATABASE-MIGRATION.md
+│   ├── DEPLOYMENT.md
+│   ├── OPERATIONS.md
+│   ├── README.ja.md
+│   ├── README.ko.md
+│   ├── README.zh-CN.md
+│   ├── README.zh-TW.md
+│   └── SECURITY.md
+├── helm/release-guardian/
+│   ├── Chart.yaml
+│   ├── values.yaml
+│   └── templates/
+├── k8s/
+│   ├── base/
+│   └── overlays/
+│       ├── staging/
+│       └── production/
 ├── openapi/openapi.yaml
 ├── package.json
-├── scripts/seed-demo.js
+├── scripts/
+│   ├── benchmark.js
+│   └── seed-demo.js
 ├── src/
 │   ├── app.js
 │   ├── bootstrap.js
 │   ├── lib/
 │   │   ├── http.js
+│   │   ├── logger.js
+│   │   ├── middleware.js
 │   │   ├── time.js
-│   │   └── validation.js
+│   │   ├── validation.js
+│   │   └── webhooks.js
 │   ├── repository.js
 │   ├── server.js
 │   └── services/
@@ -676,7 +740,12 @@ release-guardian/
 └── tests/
     ├── app.test.js
     ├── bootstrap.test.js
-    └── releaseService.test.js
+    ├── bulk.test.js
+    ├── logger.test.js
+    ├── middleware.test.js
+    ├── openapi.test.js
+    ├── releaseService.test.js
+    └── webhooks.test.js
 ```
 
 ## 20. License

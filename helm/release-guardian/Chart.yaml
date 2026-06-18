@@ -1,0 +1,14 @@
+apiVersion: v2
+name: release-guardian
+description: Enterprise-grade release governance API
+type: application
+version: 1.6.0
+appVersion: "1.7.0"
+keywords:
+  - release
+  - governance
+  - audit
+  - devops
+home: https://github.com/cyl147368/release-guardian
+maintainers:
+  - name: release-guardian

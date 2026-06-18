@@ -61,7 +61,7 @@ test("getReadiness reports datastore health and service metadata", async () => {
   const readiness = await service.getReadiness();
 
   assert.equal(readiness.status, "ready");
-  assert.equal(readiness.version, "1.6.0");
+  assert.equal(readiness.version, "1.7.0");
   assert.equal(readiness.checks.datastore.status, "ok");
   assert.equal(readiness.checks.datastore.releaseCount, 0);
   assert.equal(readiness.checks.datastore.teamCount, 3);

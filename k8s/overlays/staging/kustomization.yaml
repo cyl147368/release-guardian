@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+patches:
+  - target:
+      kind: Deployment
+      name: release-guardian
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 1
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: LOG_LEVEL
+          value: debug
+configMapGenerator:
+  - name: release-guardian-config
+    behavior: merge
+    literals:
+      - LOG_LEVEL=debug
+      - RATE_LIMIT_ENABLED=false

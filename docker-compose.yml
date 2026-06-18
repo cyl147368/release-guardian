@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+  release-guardian:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: release-guardian
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOST=0.0.0.0
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - RATE_LIMIT_ENABLED=${RATE_LIMIT_ENABLED:-false}
+      - RATE_LIMIT_MAX=${RATE_LIMIT_MAX:-100}
+      - RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS:-60000}
+      - API_KEYS=${API_KEYS:-}
+    volumes:
+      - guardian-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  release-guardian-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: release-guardian-dev
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - HOST=0.0.0.0
+      - LOG_LEVEL=debug
+    volumes:
+      - ./data:/app/data
+      - ./src:/app/src
+    command: ["node", "--watch", "src/server.js"]
+    restart: unless-stopped
+
+volumes:
+  guardian-data:

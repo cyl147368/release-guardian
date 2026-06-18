@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: release-guardian
+  labels:
+    app: release-guardian
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: release-guardian
+  template:
+    metadata:
+      labels:
+        app: release-guardian
+    spec:
+      containers:
+        - name: release-guardian
+          image: release-guardian:latest
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "3000"
+            - name: HOST
+              value: "0.0.0.0"
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: release-guardian-config
+                  key: LOG_LEVEL
+                  optional: true
+            - name: RATE_LIMIT_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: release-guardian-config
+                  key: RATE_LIMIT_ENABLED
+                  optional: true
+            - name: API_KEYS
+              valueFrom:
+                secretKeyRef:
+                  name: release-guardian-secrets
+                  key: API_KEYS
+                  optional: true
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3000
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: release-guardian-data

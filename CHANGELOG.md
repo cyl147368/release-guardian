@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## 1.7.0 - 2026-06-18
+
+### Added
+
+- Multi-stage Dockerfile with non-root user, health check, and OCI labels
+- docker-compose.yml with production and development service profiles
+- GitHub Actions CI: multi-Node matrix (20, 22, 24), coverage enforcement, OpenAPI contract tests
+- Kustomize-based Kubernetes manifests with staging and production overlays
+- Helm chart with configurable replicas, ingress, autoscaling, persistence, and secrets
+- Load test / benchmark script (`scripts/benchmark.js`) with configurable concurrency and duration
+- Database migration documentation with PostgreSQL schema, adapter pattern, and zero-downtime migration guide
+- .dockerignore for minimal build context
+
+### Changed
+
+- Dockerfile now uses multi-stage build for smaller production images
+- CI pipeline now enforces 80% coverage threshold
+
 ## 1.6.0 - 2026-06-18
 
 ### Added
