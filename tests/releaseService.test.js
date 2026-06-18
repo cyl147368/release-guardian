@@ -639,3 +639,135 @@ test("getDashboard returns comprehensive metrics", async () => {
   assert.ok(typeof dashboard.changeFailureRate === "number");
   assert.ok(typeof dashboard.averageLeadHours === "number");
 });
+
+test("getRelease returns release when found", async () => {
+  const repository = await createFixtureRepository();
+  const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");
+
+  const created = await service.createRelease(buildPayload());
+  const found = await service.getRelease(created.id);
+
+  assert.equal(found.id, created.id);
+  assert.equal(found.application, created.application);
+});
+
+test("getRelease throws 404 for nonexistent id", async () => {
+  const repository = await createFixtureRepository();
+  const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");
+
+  await assert.rejects(
+    () => service.getRelease("nonexistent-id"),
+    { statusCode: 404 }
+  );
+});
+
+test("reviewRelease records approval decision", async () => {
+  const repository = await createFixtureRepository();
+  const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");
+
+  const release = await service.createRelease({
+    ...buildPayload(),
+    environment: "production",
+    serviceTier: "tier_1",
+    changeCategory: "emergency"
+  });
+
+  assert.equal(release.status, "pending_approval");
+  const targetTeam = release.approvals[0].team;
+
+  const approved = await service.reviewRelease(release.id, {
+    team: targetTeam,
+    actor: "reviewer",
+    decision: "approved",
+    comment: "Reviewed and approved."
+  });
+
+  assert.ok(approved);
+});
+
+test("reviewRelease throws 404 for nonexistent release", async () => {
+  const repository = await createFixtureRepository();
+  const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");
+
+  await assert.rejects(
+    () => service.reviewRelease("nonexistent-id", { team: "release_management", actor: "reviewer", decision: "approved" }),
+    (err) => err.statusCode === 404 || err.message.includes("not found")
+  );
+});
+
+test("scheduleRelease schedules an approved release", async () => {
+  const repository = await createFixtureRepository();
+  const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");
+
+  const release = await service.createRelease({
+    application: "docs-site",
+    version: "1.0.0",
+    environment: "development",
+    serviceTier: "tier_3",
+    changeCategory: "standard",
+    plannedStartAt: "2026-06-20T08:00:00.000Z",
+    plannedEndAt: "2026-06-20T09:00:00.000Z",
+    summary: "Minor update.",
+    components: ["site"],
+    owner: "tester",
+    controls: {
+      automatedTestsPassed: true,
+      rollbackReady: true,
+      monitoringReady: true,
+      securityReviewed: false,
+      customerImpactScore: 0,
+      dataSensitivityScore: 0
+    }
+  });
+
+  assert.equal(release.status, "approved");
+
+  const scheduled = await service.scheduleRelease(release.id, {
+    scheduledAt: "2026-06-20T08:00:00.000Z",
+    actor: "scheduler"
+  });
+
+  assert.equal(scheduled.status, "scheduled");
+});
+
+test("scheduleRelease throws 404 for nonexistent release", async () => {
+  const repository = await createFixtureRepository();
+  const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");
+
+  await assert.rejects(
+    () => service.scheduleRelease("nonexistent-id", { scheduledAt: "2026-06-20T08:00:00.000Z", actor: "scheduler" }),
+    (err) => err.statusCode === 404 || err.message.includes("not found")
+  );
+});
+
+test("deployRelease throws 404 for nonexistent release", async () => {
+  const repository = await createFixtureRepository();
+  const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");
+
+  await assert.rejects(
+    () => service.deployRelease("nonexistent-id", { outcome: "deployed", actor: "alice" }),
+    (err) => err.statusCode === 404 || err.message.includes("not found")
+  );
+});
+
+test("getEvidencePackage throws 404 for nonexistent release", async () => {
+  const repository = await createFixtureRepository();
+  const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");
+
+  await assert.rejects(
+    () => service.getEvidencePackage("nonexistent-id"),
+    { statusCode: 404 }
+  );
+});
+
+test("getReleaseConflicts returns empty for release with no conflicts", async () => {
+  const repository = await createFixtureRepository();
+  const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");
+
+  const release = await service.createRelease(buildPayload());
+  const conflicts = await service.getReleaseConflicts(release.id);
+
+  assert.ok(conflicts);
+  assert.equal(conflicts.releaseId, release.id);
+  assert.ok(Array.isArray(conflicts.conflicts));
+});
