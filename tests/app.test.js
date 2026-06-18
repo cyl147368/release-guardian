@@ -32,7 +32,7 @@ function buildRequest(method, url, body) {
 function createPayload() {
   return {
     application: "ops-portal",
-    version: "2.2.0",
+    version: "2.3.0",
     environment: "staging",
     serviceTier: "tier_2",
     changeCategory: "standard",
@@ -67,7 +67,7 @@ test("GET /ready returns structured readiness payload", async () => {
 
   assert.equal(response.statusCode, 200);
   assert.equal(body.data.status, "ready");
-  assert.equal(body.data.version, "2.2.0");
+  assert.equal(body.data.version, "2.3.0");
   assert.equal(body.data.checks.datastore.status, "ok");
 });
 
@@ -77,7 +77,7 @@ test("GET /ready returns 503 when readiness checks fail", async () => {
       return {
         status: "not_ready",
         generatedAt: "2026-06-18T00:00:00.000Z",
-        version: "2.2.0",
+        version: "2.3.0",
         checks: {
           datastore: {
             status: "error",
@@ -399,7 +399,7 @@ test("GET /api/webhooks/events returns event log", async () => {
 test("POST /api/releases/bulk creates multiple releases", async () => {
   const app = await createFixtureApp();
   const response = await app(buildRequest("POST", "/api/releases/bulk", {
-    releases: [createPayload(), { ...createPayload(), application: "bulk-b", version: "2.2.0" }]
+    releases: [createPayload(), { ...createPayload(), application: "bulk-b", version: "2.3.0" }]
   }));
   assert.equal(response.statusCode, 201);
   const body = JSON.parse(response.body);

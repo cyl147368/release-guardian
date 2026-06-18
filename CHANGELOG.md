@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented in this file.
 
+## 2.3.0 - 2026-06-18
+
+### Added
+
+- Code quality check script (scripts/quality-check.js) with syntax, test, coverage, and OpenAPI contract validation
+- Roadmap document (docs/ROADMAP.md) with completed features and future plans
+- assertPositiveInteger validation tests (3 tests)
+
+### Changed
+
+- README updated with quality check script command
+- Test count increased to 176 across 32 suites
+- Coverage improved to 94.58% line, 87.67% branch, 96.13% function
+
 ## 2.2.0 - 2026-06-18
 
 ### Added

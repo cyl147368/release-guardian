@@ -3,7 +3,7 @@ name: release-guardian
 description: Enterprise-grade release governance API
 type: application
 version: 1.6.0
-appVersion: "2.2.0"
+appVersion: "2.3.0"
 keywords:
   - release
   - governance
