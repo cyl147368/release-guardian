@@ -615,10 +615,13 @@ Suggested production hardening:
 - Environment variable reference (.env.example)
 - Seed data with 5 diverse demo releases
 - Multilingual documentation (EN, zh-CN, zh-TW, JA, KO)
-- Architecture Decision Records (ADR)
+- Architecture Decision Records (ADR) — 5 篇
 - API 变更日志
 - GitHub issue/PR 模板
 - CODEOWNERS 和自动标签
+- 可观测性集成指南
+- 性能优化指南
+- 故障排除指南
 
 ## 16. Multilingual Overview
 

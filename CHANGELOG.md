@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
+## 2.2.0 - 2026-06-18
+
+### Added
+
+- Deep health check module with extensible component checks (src/lib/healthcheck.js)
+- Performance optimization guide (docs/PERFORMANCE.md)
+- Troubleshooting guide (docs/TROUBLESHOOTING.md)
+- 5 health checker tests (173 total)
+
+### Changed
+
+- README updated with links to all new documentation
+
 ## 2.1.0 - 2026-06-18
 
 ### Added
