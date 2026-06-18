@@ -5,7 +5,7 @@
 **Enterprise Release Governance Platform**
 
 [![CI](https://github.com/cyl147368/release-guardian/actions/workflows/ci.yml/badge.svg)](https://github.com/cyl147368/release-guardian/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-96.75%25-brightgreen)](https://github.com/cyl147368/release-guardian)
+[![Coverage](https://img.shields.io/badge/coverage-93.66%25-brightgreen)](https://github.com/cyl147368/release-guardian)
 [![Node](https://img.shields.io/badge/node-%3E%3D20-green)](https://nodejs.org)
 [![License](https://img.shields.io/badge/license-MIT-blue)](../LICENSE)
 
@@ -32,7 +32,7 @@ Release Guardian is a zero-dependency enterprise release governance platform tha
 | 📝 Audit Log | Complete operation records with multi-dimensional querying |
 | 📈 Prometheus Metrics | Built-in metrics collection, one-click Grafana integration |
 | 🐳 Container Ready | Docker + Kubernetes + Helm one-click deployment |
-| ✅ 93.98% Coverage | 246 test cases, enterprise-grade quality assurance |
+| ✅ 93.66% Coverage | 262 test cases, enterprise-grade quality assurance |
 
 ---
 

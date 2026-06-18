@@ -5,7 +5,7 @@
 **企业级发布治理平台**
 
 [![CI](https://github.com/cyl147368/release-guardian/actions/workflows/ci.yml/badge.svg)](https://github.com/cyl147368/release-guardian/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-96.98%25-brightgreen)](https://github.com/cyl147368/release-guardian)
+[![Coverage](https://img.shields.io/badge/coverage-93.66%25-brightgreen)](https://github.com/cyl147368/release-guardian)
 [![Node](https://img.shields.io/badge/node-%3E%3D20-green)](https://nodejs.org)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
@@ -32,7 +32,7 @@ Release Guardian 是一个零依赖的企业级发布治理平台，帮助团队
 | 📝 审计日志 | 完整记录所有操作，支持多维度查询 |
 | 📈 Prometheus 指标 | 内置指标采集，一键接入 Grafana 监控 |
 | 🐳 容器就绪 | Docker + Kubernetes + Helm 一键部署 |
-| ✅ 96.98% 覆盖率 | 234 个测试用例，企业级质量保障 |
+| ✅ 93.66% 覆盖率 | 262 个测试用例，企业级质量保障 |
 | 🔌 WebSocket 实时推送 | 零依赖 WebSocket 支持，事件订阅机制 |
 
 ---
