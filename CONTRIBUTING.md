@@ -1,186 +1,228 @@
 # 贡献指南
 
-感谢你对 Release Guardian 的兴趣！我们欢迎所有形式的贡献。
+感谢您对 Release Guardian 项目的关注！本文档将帮助您了解如何参与项目开发。
 
-## 如何贡献
+## 目录
 
-### 1. 报告 Bug
-
-使用 [Bug 报告模板](https://github.com/cyl147368/release-guardian/issues/new?template=bug_report.md) 报告 Bug。
-
-**请包含**:
-- Bug 描述
-- 复现步骤
-- 期望行为
-- 实际行为
-- 环境信息（OS、Node.js 版本等）
-- 相关日志
-
-### 2. 建议功能
-
-使用 [功能请求模板](https://github.com/cyl147368/release-guardian/issues/new?template=feature_request.md) 建议新功能。
-
-**请包含**:
-- 功能描述
-- 使用场景
-- 期望行为
-- 替代方案
-
-### 3. 提交代码
-
-#### Fork 项目
-
-```bash
-# Fork 项目到你的 GitHub
-# 克隆你的 Fork
-git clone https://github.com/your-username/release-guardian.git
-cd release-guardian
-
-# 添加上游仓库
-git remote add upstream https://github.com/cyl147368/release-guardian.git
-```
-
-#### 创建分支
-
-```bash
-# 同步上游
-git fetch upstream
-git checkout main
-git merge upstream/main
-
-# 创建功能分支
-git checkout -b feature/amazing-feature
-```
-
-#### 开发
-
-```bash
-# 安装依赖
-npm install
-
-# 运行测试
-npm test
-
-# 运行测试并生成覆盖率
-npm run test:coverage
-
-# 代码规范检查
-npm run lint
-
-# 综合质量检查
-npm run quality
-```
-
-#### 提交
-
-```bash
-# 添加更改
-git add .
-
-# 提交（使用语义化提交信息）
-git commit -m "feat: 新增超棒功能"
-
-# 推送到你的 Fork
-git push origin feature/amazing-feature
-```
-
-#### 创建 Pull Request
-
-1. 访问你的 Fork 页面
-2. 点击 "New Pull Request"
-3. 选择目标分支（通常是 `main`）
-4. 填写 PR 描述
-5. 等待代码审查
+- [开发环境](#开发环境)
+- [项目结构](#项目结构)
+- [开发流程](#开发流程)
+- [代码规范](#代码规范)
+- [测试规范](#测试规范)
+- [提交规范](#提交规范)
+- [文档规范](#文档规范)
 
 ## 开发环境
 
-### 环境要求
+### 前置要求
 
 - Node.js >= 20
 - npm >= 9
 - Git
 
-### 安装
+### 环境搭建
 
 ```bash
-git clone https://github.com/cyl147368/release-guardian.git
+# 1. Fork 项目到您的 GitHub 账号
+
+# 2. 克隆项目
+git clone https://github.com/your-username/release-guardian.git
 cd release-guardian
+
+# 3. 安装依赖
 npm install
-```
 
-### 运行
-
-```bash
-npm start
-```
-
-### 测试
-
-```bash
-# 运行所有测试
+# 4. 运行测试
 npm test
 
-# 运行测试并生成覆盖率
-npm run test:coverage
-
-# 运行特定测试文件
-node --test tests/app.test.js
-
-# 运行特定测试
-node --test --test-name-pattern "GET /health" tests/app.test.js
+# 5. 启动开发服务器
+npm run dev
 ```
 
-### 代码规范
+### 开发工具推荐
 
-```bash
-# 检查代码规范
-npm run lint
+- **编辑器**: VS Code
+- **扩展**: ESLint, Prettier, GitLens
+- **终端**: iTerm2 或 Windows Terminal
 
-# 自动修复
-npm run lint -- --fix
+## 项目结构
+
+```
+release-guardian/
+├── src/                    # 源代码
+│   ├── app.js             # HTTP 路由和静态文件服务
+│   ├── bootstrap.js       # 服务器启动和中间件管道
+│   ├── server.js          # 入口文件
+│   ├── repository.js      # JSON 文件持久化
+│   ├── lib/               # 工具库
+│   │   ├── audit.js       # 审计日志模块
+│   │   ├── healthcheck.js # 健康检查
+│   │   ├── http.js        # HTTP 工具函数
+│   │   ├── logger.js      # 结构化日志
+│   │   ├── metrics.js     # 性能指标
+│   │   ├── middleware.js  # 中间件
+│   │   ├── sanitization.js# 输入清理
+│   │   ├── time.js        # 时间工具
+│   │   ├── validation.js  # 输入验证
+│   │   ├── webhooks.js    # Webhook 管理
+│   │   └── websocket.js   # WebSocket 实时推送
+│   └── services/          # 业务逻辑
+│       └── releaseService.js
+├── tests/                  # 测试文件
+├── public/                 # 前端静态资源
+│   ├── index.html
+│   ├── css/
+│   └── js/
+├── docs/                   # 文档
+├── openapi/                # OpenAPI 规范
+├── scripts/                # 工具脚本
+└── data/                   # 数据文件
 ```
 
-### 综合质量检查
+## 开发流程
+
+### 1. 创建功能分支
 
 ```bash
+# 确保主分支是最新的
+git checkout main
+git pull origin main
+
+# 创建功能分支
+git checkout -b feature/your-feature-name
+```
+
+### 2. 开发功能
+
+```bash
+# 编写代码
+# 运行测试
+npm test
+
+# 运行质量检查
 npm run quality
+```
+
+### 3. 提交更改
+
+```bash
+# 添加更改
+git add .
+
+# 提交（遵循提交规范）
+git commit -m "feat: 添加新功能描述"
+```
+
+### 4. 推送并创建 PR
+
+```bash
+# 推送到远程
+git push origin feature/your-feature-name
+
+# 在 GitHub 上创建 Pull Request
 ```
 
 ## 代码规范
 
 ### JavaScript 规范
 
-- 使用 ES 模块（`import/export`）
+- 使用 ES Modules (`import/export`)
 - 使用 `const` 和 `let`，避免 `var`
-- 使用箭头函数
+- 使用箭头函数或函数声明
 - 使用模板字符串
 - 使用解构赋值
-- 使用 async/await
+- 使用 async/await 处理异步
 
 ### 命名规范
 
-- **变量和函数**: camelCase
-- **类名**: PascalCase
-- **常量**: UPPER_SNAKE_CASE
-- **文件名**: camelCase 或 kebab-case
+- **文件名**: camelCase (`releaseService.js`)
+- **类名**: PascalCase (`ReleaseService`)
+- **函数名**: camelCase (`createRelease`)
+- **常量**: UPPER_SNAKE_CASE (`SERVICE_VERSION`)
+- **变量**: camelCase (`releaseId`)
 
-### 注释规范
+### 代码风格
 
 ```javascript
-/**
- * 函数描述
- * @param {string} param1 - 参数1描述
- * @param {number} param2 - 参数2描述
- * @returns {object} 返回值描述
- */
-function myFunction(param1, param2) {
-  // 实现
+// ✅ 好的示例
+export function createRelease(input) {
+  const timestamp = this.clock();
+  const risk = calculateRisk(input);
+  
+  return {
+    id: randomUUID(),
+    application: input.application.trim(),
+    version: input.version.trim(),
+    // ...
+  };
+}
+
+// ❌ 避免的示例
+export function createRelease(input) {
+  var timestamp = this.clock()
+  var risk = calculateRisk(input)
+  
+  return {
+    id: randomUUID(),
+    application: input.application.trim(),
+    version: input.version.trim(),
+    // ...
+  }
 }
 ```
 
-### 提交信息规范
+## 测试规范
 
-使用 [Conventional Commits](https://www.conventionalcommits.org/):
+### 测试文件命名
+
+- 测试文件放在 `tests/` 目录
+- 文件名格式: `{模块名}.test.js`
+- 例如: `releaseService.test.js`
+
+### 测试结构
+
+```javascript
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+
+describe("模块名称", () => {
+  describe("功能分组", () => {
+    it("测试用例描述", () => {
+      // Arrange - 准备测试数据
+      const input = { /* ... */ };
+      
+      // Act - 执行被测试的功能
+      const result = functionUnderTest(input);
+      
+      // Assert - 验证结果
+      assert.equal(result.status, "expected");
+    });
+  });
+});
+```
+
+### 测试覆盖率要求
+
+- 行覆盖率: >= 80%
+- 分支覆盖率: >= 80%
+- 函数覆盖率: >= 80%
+
+### 运行测试
+
+```bash
+# 运行所有测试
+npm test
+
+# 运行特定测试文件
+npm run test:bootstrap
+
+# 运行覆盖率检查
+npm run test:coverage
+```
+
+## 提交规范
+
+### 提交消息格式
 
 ```
 <type>(<scope>): <subject>
@@ -190,253 +232,125 @@ function myFunction(param1, param2) {
 <footer>
 ```
 
-**类型**:
+### 类型 (type)
+
 - `feat`: 新功能
-- `fix`: Bug 修复
+- `fix`: 修复 bug
 - `docs`: 文档更新
-- `style`: 代码格式（不影响功能）
+- `style`: 代码格式调整
 - `refactor`: 重构
-- `perf`: 性能优化
-- `test`: 测试
-- `chore`: 构建/工具
+- `test`: 测试相关
+- `chore`: 构建/工具链更新
 
-**示例**:
+### 示例
+
 ```
-feat(release): 新增批量创建功能
+feat(release): 添加批量创建发布功能
 
-- 支持一次创建多个发布
-- 验证每个发布的有效性
-- 返回创建结果和错误信息
+- 支持一次创建最多 50 个发布
+- 验证每个发布的必填字段
+- 返回成功和失败的详细信息
 
 Closes #123
 ```
 
-## 测试指南
+```
+fix(auth): 修复 API 密钥验证逻辑
 
-### 测试原则
+- 修复空密钥导致的 500 错误
+- 添加密钥格式验证
 
-- 每个功能都应该有测试
-- 测试应该独立且可重复
-- 测试应该快速执行
-- 测试应该清晰易懂
-
-### 编写测试
-
-```javascript
-import test from "node:test";
-import assert from "node:assert/strict";
-
-test("功能描述", async () => {
-  // 准备
-  const input = { /* ... */ };
-  
-  // 执行
-  const result = await myFunction(input);
-  
-  // 断言
-  assert.equal(result.status, "success");
-  assert.ok(result.data);
-});
+Fixes #456
 ```
 
-### 测试覆盖率
-
-```bash
-# 生成覆盖率报告
-npm run test:coverage
-
-# 查看未覆盖的行
-npm run test:coverage 2>&1 | grep "uncovered"
-```
-
-### 测试最佳实践
-
-- 测试边界条件
-- 测试错误情况
-- 使用描述性测试名称
-- 避免测试实现细节
-- 使用 mock 和 stub
-
-## 文档指南
+## 文档规范
 
 ### 文档类型
 
-- **README.md**: 项目概述和快速开始
-- **docs/**: 详细文档
-- **代码注释**: 函数和复杂逻辑说明
-- **CHANGELOG.md**: 版本更新记录
+1. **README.md**: 项目概述和快速开始
+2. **API 文档**: OpenAPI 规范 (`openapi/openapi.yaml`)
+3. **架构文档**: `docs/ARCHITECTURE.md`
+4. **部署文档**: `docs/DEPLOYMENT.md`
+5. **运维文档**: `docs/OPERATIONS.md`
 
-### 编写文档
+### 文档更新
 
-- 使用清晰简洁的语言
-- 提供代码示例
-- 包含使用场景
-- 保持文档更新
+- 新功能必须更新相关文档
+- API 变更必须更新 OpenAPI 规范
+- 重大变更必须更新 CHANGELOG.md
 
-### 文档结构
+### 多语言支持
 
-```
-docs/
-├── ARCHITECTURE.md    # 架构文档
-├── DEPLOYMENT.md      # 部署指南
-├── OPERATIONS.md      # 运维手册
-├── OBSERVABILITY.md   # 可观测性
-├── PERFORMANCE.md     # 性能指南
-├── SECURITY.md        # 安全策略
-├── TROUBLESHOOTING.md # 故障排查
-└── ROADMAP.md         # 路线图
-```
+- 主文档: 中文
+- 翻译文档: 英文、日文、韩文、繁体中文
+- 翻译放在 `docs/` 目录
 
-## Pull Request 指南
+## Pull Request 规范
+
+### PR 标题
+
+遵循提交规范格式。
 
 ### PR 描述
 
-**请包含**:
-- 更改描述
-- 相关 Issue
-- 测试说明
-- 文档更新
-
-**示例**:
 ```markdown
-## 描述
+## 变更说明
 
-新增批量创建发布功能。
+简要描述本次变更的内容。
+
+## 变更类型
+
+- [ ] 新功能
+- [ ] Bug 修复
+- [ ] 文档更新
+- [ ] 重构
+- [ ] 测试
+
+## 测试情况
+
+- [ ] 已添加新测试
+- [ ] 所有测试通过
+- [ ] 覆盖率满足要求
 
 ## 相关 Issue
 
-Closes #123
-
-## 更改内容
-
-- 新增 POST /api/releases/bulk 端点
-- 支持一次创建多个发布
-- 验证每个发布的有效性
-- 返回创建结果和错误信息
-
-## 测试
-
-- [x] 单元测试
-- [x] 集成测试
-- [x] 代码覆盖率 > 90%
-
-## 文档
-
-- [x] API 文档更新
-- [x] README 更新
-- [x] CHANGELOG 更新
+Closes #xxx
 ```
 
 ### 代码审查
 
-**审查要点**:
-- 代码质量
-- 测试覆盖
-- 文档更新
-- 性能影响
-- 安全考虑
+- 至少需要 1 个审批
+- 所有自动化检查必须通过
+- 解决所有审查意见
 
-**审查流程**:
-1. 自动化检查（CI）
-2. 人工审查
-3. 反馈和修改
-4. 合并发布
+## 问题反馈
 
-## 发布流程
+### Bug 报告
 
-### 版本号
+使用 Bug Report 模板，包含：
+- 问题描述
+- 复现步骤
+- 预期行为
+- 实际行为
+- 环境信息
 
-使用 [语义化版本](https://semver.org/):
+### 功能请求
 
-- **主版本号**: 不兼容的 API 更改
-- **次版本号**: 向后兼容的功能
-- **修订号**: 向后兼容的 Bug 修复
+使用 Feature Request 模板，包含：
+- 功能描述
+- 使用场景
+- 实现建议
 
-### 发布步骤
+## 社区准则
 
-1. 更新版本号
-2. 更新 CHANGELOG
-3. 创建 Git 标签
-4. 发布到 npm（如果适用）
-5. 创建 GitHub Release
-6. 发布公告
-
-## 社区
-
-### 沟通渠道
-
-- **GitHub Issues**: Bug 报告和功能请求
-- **GitHub Discussions**: 一般讨论和问答
-- **邮件**: security@example.com（安全问题）
-
-### 行为准则
-
-- 尊重他人
-- 包容不同观点
-- 建设性反馈
-- 专业态度
-
-### 获得帮助
-
-- 查看文档
-- 搜索现有 Issue
-- 提问时提供详细信息
-- 耐心等待回复
-
-## 许可证
-
-贡献即表示你同意你的贡献将在 [MIT 许可证](LICENSE) 下发布。
-
-## 致谢
-
-感谢所有贡献者的支持！
-
-## 常见问题
-
-### Q: 如何运行测试？
-
-```bash
-npm test
-```
-
-### Q: 如何生成覆盖率报告？
-
-```bash
-npm run test:coverage
-```
-
-### Q: 如何检查代码规范？
-
-```bash
-npm run lint
-```
-
-### Q: 如何运行综合质量检查？
-
-```bash
-npm run quality
-```
-
-### Q: 如何提交 PR？
-
-1. Fork 项目
-2. 创建功能分支
-3. 提交更改
-4. 创建 PR
-5. 等待审查
-
-### Q: 如何报告安全漏洞？
-
-发送邮件至 security@example.com，不要公开披露。
-
-### Q: 如何加入社区？
-
-- GitHub Discussions
-- 邮件列表
-- 社区论坛
+- 尊重所有贡献者
+- 建设性地提供反馈
+- 遵循项目编码规范
+- 保持专业和友善
 
 ## 联系方式
 
-- **GitHub**: https://github.com/cyl147368/release-guardian
-- **邮件**: support@example.com
-- **文档**: https://github.com/cyl147368/release-guardian/docs
+- GitHub Issues: 项目问题反馈
+- Email: 项目维护者邮箱
+
+感谢您的贡献！🎉
