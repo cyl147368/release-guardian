@@ -538,3 +538,104 @@ test("listReleases returns pagination metadata", async () => {
   assert.equal(allItems.items.length, 5);
   assert.equal(allItems.hasMore, false);
 });
+
+test("createRelease with emergency change category", async () => {
+  const repository = await createFixtureRepository();
+  const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");
+
+  const release = await service.createRelease({
+    ...buildPayload(),
+    changeCategory: "emergency",
+    environment: "production",
+    serviceTier: "tier_1"
+  });
+
+  assert.ok(release.risk.score >= 70);
+  assert.equal(release.status, "pending_approval");
+});
+
+test("createRelease with low-risk change auto-approves", async () => {
+  const repository = await createFixtureRepository();
+  const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");
+
+  const release = await service.createRelease({
+    application: "docs-site",
+    version: "1.0.0",
+    environment: "development",
+    serviceTier: "tier_3",
+    changeCategory: "standard",
+    plannedStartAt: "2026-06-18T08:00:00.000Z",
+    plannedEndAt: "2026-06-18T09:00:00.000Z",
+    summary: "Minor doc update.",
+    components: ["site"],
+    owner: "tester",
+    controls: {
+      automatedTestsPassed: true,
+      rollbackReady: true,
+      monitoringReady: true,
+      securityReviewed: false,
+      customerImpactScore: 0,
+      dataSensitivityScore: 0
+    }
+  });
+
+  assert.ok(release.risk.score < 70);
+  assert.equal(release.status, "approved");
+});
+
+test("createRelease records timeline entry", async () => {
+  const repository = await createFixtureRepository();
+  const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");
+
+  const release = await service.createRelease(buildPayload());
+
+  assert.ok(Array.isArray(release.timeline));
+  assert.ok(release.timeline.length >= 1);
+  assert.equal(release.timeline[0].type, "release_created");
+});
+
+test("createRelease validates all required fields", async () => {
+  const repository = await createFixtureRepository();
+  const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");
+
+  await assert.rejects(
+    () => service.createRelease({}),
+    { code: "validation_error" }
+  );
+
+  await assert.rejects(
+    () => service.createRelease({ application: "" }),
+    { code: "validation_error" }
+  );
+});
+
+test("getPolicy returns complete policy snapshot", async () => {
+  const repository = await createFixtureRepository();
+  const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");
+
+  const policy = await service.getPolicy();
+
+  assert.ok(policy.generatedAt);
+  assert.ok(Array.isArray(policy.environments));
+  assert.ok(Array.isArray(policy.releaseStatuses));
+  assert.ok(Array.isArray(policy.serviceTiers));
+  assert.ok(Array.isArray(policy.riskBands));
+  assert.ok(Array.isArray(policy.approvalRouting));
+  assert.ok(policy.controlScoreBounds);
+});
+
+test("getDashboard returns comprehensive metrics", async () => {
+  const repository = await createFixtureRepository();
+  const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");
+
+  await service.createRelease(buildPayload());
+
+  const dashboard = await service.getDashboard();
+
+  assert.equal(dashboard.totalReleases, 1);
+  assert.ok(dashboard.byStatus);
+  assert.ok(dashboard.byEnvironment);
+  assert.ok(dashboard.riskDistribution);
+  assert.ok(typeof dashboard.changeFailureRate === "number");
+  assert.ok(typeof dashboard.averageLeadHours === "number");
+});
