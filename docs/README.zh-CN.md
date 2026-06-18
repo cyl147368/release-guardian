@@ -297,7 +297,7 @@ kubectl apply -k k8s/overlays/production
 
 ```bash
 helm install release-guardian helm/release-guardian \
-  --set image.tag=1.8.0 \
+  --set image.tag=2.0.0 \
   --set config.logLevel=info \
   --set secrets.apiKeys=my-secret-key
 ```
@@ -374,6 +374,7 @@ npm start
 | `RATE_LIMIT_WINDOW_MS` | `60000` | 窗口时长（毫秒） |
 | `API_KEYS` | _(空)_ | 逗号分隔的 API Key |
 | `CORS_ORIGIN` | `*` | CORS 允许的来源 |
+| `MAX_BODY_BYTES` | `1048576` | Maximum request body size |
 | `SECURITY_HEADERS` | `true` | 启用安全响应头 |
 
 ## 11. API 使用示例
@@ -474,7 +475,7 @@ npm run test:bootstrap # 启动配置测试
 ## 15. 交付内容
 
 - 源代码
-- 测试套件（87 个测试）
+- 测试套件（135 个测试）
 - Dockerfile（多阶段构建）
 - docker-compose.yml
 - GitHub Actions CI 工作流

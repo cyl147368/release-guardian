@@ -239,7 +239,7 @@ kubectl apply -k k8s/overlays/production   # 프로덕션 환경
 
 ```bash
 helm install release-guardian helm/release-guardian \
-  --set image.tag=1.8.0 \
+  --set image.tag=2.0.0 \
   --set config.logLevel=info
 ```
 
@@ -288,13 +288,14 @@ npm start
 | `RATE_LIMIT_MAX` | `100` | 윈도우당 최대 요청 수 |
 | `API_KEYS` | _(비어있음)_ | 쉼표로 구분된 API Key |
 | `CORS_ORIGIN` | `*` | CORS 허용 출처 |
+| `MAX_BODY_BYTES` | `1048576` | Maximum request body size |
 | `SECURITY_HEADERS` | `true` | 보안 응답 헤더 활성화 |
 
 ## 10. 검증 명령
 
 ```bash
 npm run lint           # 구문 검사
-npm test               # 테스트 실행 (87개 테스트)
+npm test               # 테스트 실행 (135개 테스트)
 npm run test:coverage  # 커버리지 포함 테스트
 npm run test:bootstrap # 부트스트랩 테스트
 ```

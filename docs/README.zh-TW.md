@@ -265,7 +265,7 @@ kubectl apply -k k8s/overlays/production   # 生產環境
 
 ```bash
 helm install release-guardian helm/release-guardian \
-  --set image.tag=1.8.0 \
+  --set image.tag=2.0.0 \
   --set config.logLevel=info
 ```
 
@@ -316,13 +316,14 @@ npm start
 | `RATE_LIMIT_MAX` | `100` | 每窗口最大請求數 |
 | `API_KEYS` | _(空)_ | 逗號分隔的 API Key |
 | `CORS_ORIGIN` | `*` | CORS 允許的來源 |
+| `MAX_BODY_BYTES` | `1048576` | Maximum request body size |
 | `SECURITY_HEADERS` | `true` | 啟用安全回應標頭 |
 
 ## 10. 驗證命令
 
 ```bash
 npm run lint           # 語法檢查
-npm test               # 執行測試（87 個測試）
+npm test               # 執行測試（135 個測試）
 npm run test:coverage  # 帶覆蓋率的測試
 npm run test:bootstrap # 啟動配置測試
 ```

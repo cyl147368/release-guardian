@@ -202,7 +202,7 @@ Response fields:
 
 ### `GET /api/releases`
 
-Returns all releases sorted by creation time.
+Returns paginated releases sorted by creation time. Response includes a `pagination` object with `total`, `limit`, `offset`, and `hasMore` fields.
 
 Supported query filters:
 
@@ -545,7 +545,7 @@ The automated test suite also checks that the OpenAPI contract continues to decl
 
 ## 13. Testing Strategy
 
-The project includes 121 automated tests across 17 test suites:
+The project includes 135 automated tests across 19 test suites:
 
 - Service-layer lifecycle tests (create, list, get, filter, paginate)
 - Approval workflow tests (approve, reject, SLA tracking)
@@ -565,7 +565,7 @@ The project includes 121 automated tests across 17 test suites:
 - Time and validation utility tests
 - OpenAPI contract guardrail tests (all 17 endpoints, schemas, response codes)
 
-Coverage: 93.54% line coverage, 85.59% branch coverage, 95.24% function coverage.
+Coverage: 94.12% line coverage, 86.50% branch coverage, 95.38% function coverage.
 
 ## 14. Operational Concerns
 
@@ -601,13 +601,13 @@ Suggested production hardening:
 ## 15. Delivery Contents
 
 - Source code (11 source modules)
-- Test suite (121 tests, 93.54% line coverage)
+- Test suite (135 tests, 94.12% line coverage)
 - Multi-stage Dockerfile with non-root user and health check
 - docker-compose.yml (production + development profiles)
 - GitHub Actions CI (multi-Node matrix, coverage threshold, OpenAPI contract tests)
 - Kubernetes manifests (Kustomize base + staging/production overlays)
 - Helm chart (configurable replicas, ingress, autoscaling, persistence, secrets)
-- OpenAPI 3.1 contract (17 endpoints, full schemas)
+- OpenAPI 3.1 contract (17 endpoints, full schemas, examples)
 - Load test benchmark script
 - Database migration documentation (PostgreSQL schema, adapter pattern, zero-downtime guide)
 - Security documentation with hardening checklist
@@ -615,6 +615,7 @@ Suggested production hardening:
 - Environment variable reference (.env.example)
 - Seed data with 5 diverse demo releases
 - Multilingual documentation (EN, zh-CN, zh-TW, JA, KO)
+- Architecture Decision Records (ADR)
 
 ## 16. Multilingual Overview
 
