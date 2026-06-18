@@ -285,3 +285,85 @@ export function withContentTypeValidation(app, {
     return app(request);
   };
 }
+
+/**
+ * 请求清理中间件 - 防止 XSS 和注入攻击
+ */
+export function withRequestSanitization(app) {
+  return async function sanitizedApp(request) {
+    // 清理 URL 中的潜在危险字符
+    const url = new URL(request.url, "http://localhost");
+    const pathname = url.pathname;
+    
+    // 检测路径遍历攻击
+    if (pathname.includes("..") || pathname.includes("%2e%2e")) {
+      return {
+        statusCode: 400,
+        headers: { "content-type": "application/json; charset=utf-8" },
+        body: JSON.stringify({
+          error: {
+            code: "invalid_path",
+            message: "Path traversal detected."
+          }
+        })
+      };
+    }
+    
+    // 检测 SQL 注入模式
+    const suspiciousPatterns = [
+      /union\s+select/i,
+      /drop\s+table/i,
+      /delete\s+from/i,
+      /insert\s+into/i,
+      /update\s+.*set/i
+    ];
+    
+    const urlStr = request.url;
+    for (const pattern of suspiciousPatterns) {
+      if (pattern.test(urlStr)) {
+        return {
+          statusCode: 400,
+          headers: { "content-type": "application/json; charset=utf-8" },
+          body: JSON.stringify({
+            error: {
+              code: "suspicious_input",
+              message: "Potentially malicious input detected."
+            }
+          })
+        };
+      }
+    }
+    
+    return app(request);
+  };
+}
+
+/**
+ * 请求超时中间件 - 防止慢速攻击
+ */
+export function withRequestTimeout(app, { timeoutMs = 30000 } = {}) {
+  return async function timeoutApp(request) {
+    return Promise.race([
+      app(request),
+      new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error("Request timeout"));
+        }, timeoutMs);
+      })
+    ]).catch((error) => {
+      if (error.message === "Request timeout") {
+        return {
+          statusCode: 408,
+          headers: { "content-type": "application/json; charset=utf-8" },
+          body: JSON.stringify({
+            error: {
+              code: "request_timeout",
+              message: "Request processing timeout."
+            }
+          })
+        };
+      }
+      throw error;
+    });
+  };
+}
