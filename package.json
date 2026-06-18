@@ -12,7 +12,8 @@
     "dev": "node --watch src/server.js",
     "test": "node --test",
     "test:coverage": "node --test --experimental-test-coverage",
-    "lint": "node --check src/server.js && node --check src/app.js && node --check src/repository.js && node --check src/services/releaseService.js && node --check src/lib/http.js && node --check src/lib/validation.js && node --check src/lib/time.js && node --check scripts/seed-demo.js"
+    "test:bootstrap": "node --test tests/bootstrap.test.js",
+    "lint": "node --check src/server.js && node --check src/bootstrap.js && node --check src/app.js && node --check src/repository.js && node --check src/services/releaseService.js && node --check src/lib/http.js && node --check src/lib/validation.js && node --check src/lib/time.js && node --check scripts/seed-demo.js"
   },
   "keywords": [
     "release",

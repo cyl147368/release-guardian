@@ -149,7 +149,54 @@ Returns governance aggregates:
 - Change failure rate
 - Average lead time in hours
 
-## 8. Quick Start
+## 8. Error Model
+
+All JSON errors share a common structure:
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "Human-readable message",
+    "details": {}
+  }
+}
+```
+
+### Common Error Codes
+
+- `invalid_json`
+- `validation_error`
+- `not_found`
+- `invalid_state`
+- `internal_error`
+
+## 9. Data Contract
+
+Required fields for `POST /api/releases`:
+
+- `application`
+- `version`
+- `environment`
+- `serviceTier`
+- `changeCategory`
+- `plannedStartAt`
+- `plannedEndAt`
+- `summary`
+- `components`
+- `owner`
+- `controls`
+
+Control flags:
+
+- `automatedTestsPassed`
+- `rollbackReady`
+- `monitoringReady`
+- `securityReviewed`
+- `customerImpactScore`
+- `dataSensitivityScore`
+
+## 10. Quick Start
 
 ### 8.1 Prerequisites
 
@@ -184,7 +231,7 @@ npm test
 npm run lint
 ```
 
-## 9. Example API Usage
+## 11. Example API Usage
 
 ### Create a Release
 
@@ -226,7 +273,19 @@ curl -X POST http://localhost:3000/api/releases/<releaseId>/approvals \
   }'
 ```
 
-## 10. Testing Strategy
+## 12. Verification
+
+Recommended local verification sequence:
+
+```bash
+npm install
+npm run lint
+npm test
+npm run test:coverage
+npm run test:bootstrap
+```
+
+## 13. Testing Strategy
 
 The project currently includes:
 
@@ -243,7 +302,7 @@ Recommended next-stage additions:
 - Contract tests against the OpenAPI document
 - End-to-end tests with a browser-based operations UI
 
-## 11. Operational Concerns
+## 14. Operational Concerns
 
 ### Observability
 
@@ -274,7 +333,7 @@ Suggested production hardening:
 - Externalize approval notification workflows
 - Use queues for long-running deployment actions
 
-## 12. Delivery Contents
+## 15. Delivery Contents
 
 - Source code
 - Test suite
@@ -284,7 +343,7 @@ Suggested production hardening:
 - Seed data
 - Multilingual documentation
 
-## 13. Multilingual Overview
+## 16. Multilingual Overview
 
 ### English
 
@@ -306,7 +365,7 @@ Release Guardian は、企業向けソフトウェアデリバリーチームの
 
 Release Guardian는 엔터프라이즈 소프트웨어 전달 팀을 위한 릴리스 거버넌스 API입니다. 위험 평가, 승인 흐름, 배포 추적, 운영 보고를 하나의 가볍고 감사 가능한 서비스로 통합합니다.
 
-## 14. Detailed Multilingual README Extension
+## 17. Detailed Multilingual README Extension
 
 Additional detailed documentation is provided below so globally distributed teams can share the same operational language.
 
@@ -345,7 +404,7 @@ Additional detailed documentation is provided below so globally distributed team
 - 각 릴리스는 자체 감사 타임라인을 보유합니다.
 - 대시보드 지표는 저장된 릴리스 이력에서 직접 집계됩니다.
 
-## 15. Roadmap
+## 18. Roadmap
 
 ### Near-Term
 
@@ -367,7 +426,7 @@ Additional detailed documentation is provided below so globally distributed team
 - Add adaptive approval routing
 - Add compliance evidence packaging
 
-## 16. Repository Layout
+## 19. Repository Layout
 
 ```text
 release-guardian/
@@ -393,6 +452,6 @@ release-guardian/
     └── releaseService.test.js
 ```
 
-## 17. License
+## 20. License
 
 MIT

@@ -80,3 +80,28 @@ test("GET /api/dashboard returns aggregate data", async () => {
   assert.equal(body.data.totalReleases, 1);
   assert.equal(body.data.byEnvironment.staging, 1);
 });
+
+test("POST /api/releases rejects invalid JSON", async () => {
+  const app = await createFixtureApp();
+  const stream = Readable.from(["{invalid"]);
+  stream.method = "POST";
+  stream.url = "/api/releases";
+
+  const response = await app(stream);
+  const body = JSON.parse(response.body);
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(body.error.code, "invalid_json");
+});
+
+test("POST /api/releases rejects invalid timestamps", async () => {
+  const app = await createFixtureApp();
+  const payload = createPayload();
+  payload.plannedEndAt = "not-a-date";
+
+  const response = await app(buildRequest("POST", "/api/releases", payload));
+  const body = JSON.parse(response.body);
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(body.error.code, "validation_error");
+});
