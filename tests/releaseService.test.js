@@ -161,6 +161,69 @@ test("listReleases filters by environment, status, application, owner, and risk 
   assert.equal(approvedDocs[0].application, "docs-site");
 });
 
+test("listReleases supports pagination, sorting, and pending approval filters", async () => {
+  const repository = await createFixtureRepository();
+  let tick = 0;
+  const service = new ReleaseService(repository, () =>
+    new Date(Date.UTC(2026, 5, 18, 0, tick++, 0)).toISOString()
+  );
+
+  const critical = await service.createRelease(buildPayload());
+  await service.createRelease({
+    application: "docs-site",
+    version: "1.0.0",
+    environment: "development",
+    serviceTier: "tier_3",
+    changeCategory: "standard",
+    plannedStartAt: "2026-06-18T08:00:00.000Z",
+    plannedEndAt: "2026-06-18T09:00:00.000Z",
+    summary: "Publish a minor documentation update.",
+    components: ["site"],
+    owner: "bob",
+    controls: {
+      automatedTestsPassed: true,
+      rollbackReady: true,
+      monitoringReady: true,
+      securityReviewed: true,
+      customerImpactScore: 0,
+      dataSensitivityScore: 0
+    }
+  });
+
+  const pending = await service.listReleases({
+    pendingApprovals: "true",
+    sort: "riskScore",
+    order: "desc",
+    limit: "1",
+    offset: "0"
+  });
+  const secondPage = await service.listReleases({
+    sort: "application",
+    order: "asc",
+    limit: "1",
+    offset: "1"
+  });
+
+  assert.equal(pending.length, 1);
+  assert.equal(pending[0].id, critical.id);
+  assert.equal(secondPage.length, 1);
+  assert.equal(secondPage[0].application, "docs-site");
+});
+
+test("listReleases rejects invalid query controls", async () => {
+  const repository = await createFixtureRepository();
+  const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");
+
+  await assert.rejects(
+    service.listReleases({ limit: "101" }),
+    /limit must be an integer between 1 and 100/
+  );
+  await assert.rejects(
+    service.listReleases({ pendingApprovals: "sometimes" }),
+    /pendingApprovals must be true or false/
+  );
+});
+
 test("getPolicy returns governance rules and score bounds", async () => {
   const repository = await createFixtureRepository();
   const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");

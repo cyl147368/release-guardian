@@ -124,6 +124,11 @@ Supported query filters:
 - `riskBand`
 - `application`
 - `owner`
+- `pendingApprovals`
+- `sort`
+- `order`
+- `limit`
+- `offset`
 
 ### `POST /api/releases`
 
@@ -293,6 +298,12 @@ curl -X POST http://localhost:3000/api/releases/<releaseId>/approvals \
 
 ```bash
 curl "http://localhost:3000/api/releases?environment=production&status=pending_approval&riskBand=critical"
+```
+
+### Sort And Page Releases
+
+```bash
+curl "http://localhost:3000/api/releases?pendingApprovals=true&sort=riskScore&order=desc&limit=20&offset=0"
 ```
 
 ### Retrieve Governance Policy

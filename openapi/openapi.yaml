@@ -39,6 +39,31 @@ paths:
           name: owner
           schema:
             type: string
+        - in: query
+          name: pendingApprovals
+          schema:
+            type: boolean
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [createdAt, updatedAt, riskScore, application, environment]
+        - in: query
+          name: order
+          schema:
+            type: string
+            enum: [asc, desc]
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            minimum: 0
       responses:
         "200":
           description: Release list

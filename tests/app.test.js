@@ -84,12 +84,21 @@ test("GET /api/dashboard returns aggregate data", async () => {
 test("GET /api/releases supports filters", async () => {
   const app = await createFixtureApp();
   await app(buildRequest("POST", "/api/releases", createPayload()));
-  const response = await app(buildRequest("GET", "/api/releases?environment=staging&status=approved&riskBand=medium"));
+  const response = await app(buildRequest("GET", "/api/releases?environment=staging&status=approved&riskBand=medium&sort=riskScore&order=desc&limit=10&offset=0"));
   const body = JSON.parse(response.body);
 
   assert.equal(response.statusCode, 200);
   assert.equal(body.data.length, 1);
   assert.equal(body.data[0].application, "ops-portal");
+});
+
+test("GET /api/releases rejects invalid pagination", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("GET", "/api/releases?limit=0"));
+  const body = JSON.parse(response.body);
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(body.error.code, "validation_error");
 });
 
 test("GET /api/policy returns governance policy", async () => {

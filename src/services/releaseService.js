@@ -29,13 +29,13 @@ export class ReleaseService {
   }
 
   async listReleases(filters = {}) {
-    validateReleaseFilters(filters);
+    const query = normalizeReleaseFilters(filters);
     const db = await this.repository.load();
     return db.releases
       .map((release) => refreshApprovalSla(release, this.clock()))
-      .filter((release) => matchesReleaseFilters(release, filters))
-      .slice()
-      .sort((left, right) => compareIso(right.createdAt, left.createdAt));
+      .filter((release) => matchesReleaseFilters(release, query))
+      .sort((left, right) => compareReleases(left, right, query.sort, query.order))
+      .slice(query.offset, query.offset + query.limit);
   }
 
   async getRelease(releaseId) {
@@ -320,7 +320,7 @@ export class ReleaseService {
   }
 }
 
-function validateReleaseFilters(filters) {
+function normalizeReleaseFilters(filters) {
   if (filters.environment) {
     assertEnum(filters.environment, "environment", ENVIRONMENTS);
   }
@@ -336,6 +336,30 @@ function validateReleaseFilters(filters) {
   if (filters.owner && typeof filters.owner !== "string") {
     throw new HttpError(400, "validation_error", "owner must be a string.");
   }
+
+  const sort = filters.sort || "createdAt";
+  assertEnum(sort, "sort", ["createdAt", "updatedAt", "riskScore", "application", "environment"]);
+
+  const order = filters.order || "desc";
+  assertEnum(order, "order", ["asc", "desc"]);
+
+  const limit = parseQueryInteger(filters.limit, "limit", 1, 100, 50);
+  const offset = parseQueryInteger(filters.offset, "offset", 0, Number.MAX_SAFE_INTEGER, 0);
+
+  const pendingApprovals = parseOptionalBoolean(filters.pendingApprovals, "pendingApprovals");
+
+  return {
+    environment: filters.environment,
+    status: filters.status,
+    riskBand: filters.riskBand,
+    application: filters.application,
+    owner: filters.owner,
+    sort,
+    order,
+    limit,
+    offset,
+    pendingApprovals
+  };
 }
 
 function matchesReleaseFilters(release, filters) {
@@ -345,7 +369,10 @@ function matchesReleaseFilters(release, filters) {
     (!filters.riskBand || release.risk.band === filters.riskBand) &&
     (!filters.application ||
       release.application.toLowerCase().includes(filters.application.toLowerCase())) &&
-    (!filters.owner || release.owner.toLowerCase().includes(filters.owner.toLowerCase()))
+    (!filters.owner || release.owner.toLowerCase().includes(filters.owner.toLowerCase())) &&
+    (filters.pendingApprovals === undefined ||
+      release.approvals.some((approval) => approval.status === "pending") ===
+        filters.pendingApprovals)
   );
 }
 
@@ -656,6 +683,66 @@ function buildControlEvidence(release) {
       description: "Data sensitivity score is within the configured governance bound."
     }
   ];
+}
+
+function compareReleases(left, right, sortField, order) {
+  const direction = order === "asc" ? 1 : -1;
+  const primary = compareReleaseField(left, right, sortField);
+  if (primary !== 0) {
+    return direction * primary;
+  }
+
+  const created = compareIso(left.createdAt, right.createdAt);
+  if (created !== 0) {
+    return direction * created;
+  }
+
+  return direction * left.id.localeCompare(right.id);
+}
+
+function compareReleaseField(left, right, sortField) {
+  switch (sortField) {
+    case "updatedAt":
+      return compareIso(left.updatedAt, right.updatedAt);
+    case "riskScore":
+      return left.risk.score - right.risk.score;
+    case "application":
+      return left.application.localeCompare(right.application);
+    case "environment":
+      return left.environment.localeCompare(right.environment);
+    case "createdAt":
+    default:
+      return compareIso(left.createdAt, right.createdAt);
+  }
+}
+
+function parseQueryInteger(value, field, min, max, defaultValue) {
+  if (value === undefined || value === null || value === "") {
+    return defaultValue;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed)) {
+    throw new HttpError(400, "validation_error", `${field} must be an integer.`);
+  }
+
+  assertIntegerRange(parsed, field, min, max);
+  return parsed;
+}
+
+function parseOptionalBoolean(value, field) {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  if (value === "true" || value === "1") {
+    return true;
+  }
+  if (value === "false" || value === "0") {
+    return false;
+  }
+
+  throw new HttpError(400, "validation_error", `${field} must be true or false.`);
 }
 
 export { APPROVAL_STATUS, ENVIRONMENTS, RELEASE_STATUS };
