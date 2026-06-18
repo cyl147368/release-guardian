@@ -334,3 +334,91 @@ test("POST /api/releases rejects invalid timestamps", async () => {
   assert.equal(response.statusCode, 400);
   assert.equal(body.error.code, "validation_error");
 });
+
+
+test("POST /api/webhooks creates a subscription", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "release-guardian-wh-"));
+  const filePath = join(directory, "seed.json");
+  const seed = await readFile(new URL("../data/seed.json", import.meta.url), "utf8");
+  await writeFile(filePath, seed, "utf8");
+  const service = new ReleaseService(new Repository(filePath), () => "2026-06-18T00:00:00.000Z");
+  const app = createApp(service);
+  const response = await app(buildRequest("POST", "/api/webhooks", {
+    url: "https://example.com/hook",
+    events: ["release.created"]
+  }));
+  assert.equal(response.statusCode, 201);
+  const body = JSON.parse(response.body);
+  assert.ok(body.data.id);
+  assert.equal(body.data.url, "https://example.com/hook");
+});
+
+test("GET /api/webhooks lists subscriptions", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "release-guardian-whl-"));
+  const filePath = join(directory, "seed.json");
+  const seed = await readFile(new URL("../data/seed.json", import.meta.url), "utf8");
+  await writeFile(filePath, seed, "utf8");
+  const service = new ReleaseService(new Repository(filePath), () => "2026-06-18T00:00:00.000Z");
+  service.subscribeWebhook({ url: "https://a.com/hook" });
+  const app = createApp(service);
+  const response = await app(buildRequest("GET", "/api/webhooks"));
+  assert.equal(response.statusCode, 200);
+  const body = JSON.parse(response.body);
+  assert.equal(body.data.length, 1);
+});
+
+test("DELETE /api/webhooks/:id removes a subscription", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "release-guardian-wd-"));
+  const filePath = join(directory, "seed.json");
+  const seed = await readFile(new URL("../data/seed.json", import.meta.url), "utf8");
+  await writeFile(filePath, seed, "utf8");
+  const service = new ReleaseService(new Repository(filePath), () => "2026-06-18T00:00:00.000Z");
+  const sub = service.subscribeWebhook({ url: "https://a.com/hook" });
+  const app = createApp(service);
+  const response = await app(buildRequest("DELETE", `/api/webhooks/${sub.id}`));
+  assert.equal(response.statusCode, 204);
+});
+
+test("DELETE /api/webhooks/:id returns 404 for unknown id", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("DELETE", "/api/webhooks/nonexistent"));
+  assert.equal(response.statusCode, 404);
+});
+
+test("GET /api/webhooks/events returns event log", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("GET", "/api/webhooks/events"));
+  assert.equal(response.statusCode, 200);
+  const body = JSON.parse(response.body);
+  assert.ok(Array.isArray(body.data));
+});
+
+test("POST /api/releases/bulk creates multiple releases", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("POST", "/api/releases/bulk", {
+    releases: [createPayload(), { ...createPayload(), application: "bulk-b", version: "2.0.0" }]
+  }));
+  assert.equal(response.statusCode, 201);
+  const body = JSON.parse(response.body);
+  assert.equal(body.data.created, 2);
+  assert.equal(body.data.failed, 0);
+});
+
+test("POST /api/releases/bulk handles partial failures", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("POST", "/api/releases/bulk", {
+    releases: [createPayload(), { application: "", version: "" }]
+  }));
+  assert.equal(response.statusCode, 201);
+  const body = JSON.parse(response.body);
+  assert.equal(body.data.created, 1);
+  assert.equal(body.data.failed, 1);
+});
+
+test("returns 404 for unknown paths", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("GET", "/api/unknown"));
+  assert.equal(response.statusCode, 404);
+  const body = JSON.parse(response.body);
+  assert.equal(body.error.code, "not_found");
+});
