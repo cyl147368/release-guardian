@@ -5,6 +5,7 @@ import {
   assertEnum,
   assertIntegerRange,
   assertIsoTimestamp,
+  assertPositiveInteger,
   assertString
 } from "../src/lib/validation.js";
 
@@ -52,6 +53,22 @@ describe("validation utilities", () => {
 
     it("rejects values not in the allowed set", () => {
       assert.throws(() => assertEnum("d", "field", ["a", "b", "c"]), { code: "validation_error" });
+    });
+  });
+
+  describe("assertPositiveInteger", () => {
+    it("accepts zero and positive integers", () => {
+      assert.doesNotThrow(() => assertPositiveInteger(0, "field"));
+      assert.doesNotThrow(() => assertPositiveInteger(5, "field"));
+    });
+
+    it("rejects negative integers", () => {
+      assert.throws(() => assertPositiveInteger(-1, "field"), { code: "validation_error" });
+    });
+
+    it("rejects non-integers", () => {
+      assert.throws(() => assertPositiveInteger(5.5, "field"), { code: "validation_error" });
+      assert.throws(() => assertPositiveInteger("5", "field"), { code: "validation_error" });
     });
   });
 
