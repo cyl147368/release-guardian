@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import { HttpError } from "../lib/http.js";
 import { addHours, compareIso, nowIso } from "../lib/time.js";
@@ -190,6 +190,11 @@ export class ReleaseService {
       highRiskPending,
       conflictRisks
     };
+  }
+
+  async getEscalationReport() {
+    const escalations = await this.getEscalations();
+    return buildEscalationReport(escalations);
   }
 
   async reviewRelease(releaseId, input) {
@@ -510,6 +515,173 @@ function windowsOverlap(leftStart, leftEnd, rightStart, rightEnd) {
 function calculateAgeHours(start, end) {
   const age = (new Date(end).getTime() - new Date(start).getTime()) / (1000 * 60 * 60);
   return Number(Math.max(age, 0).toFixed(2));
+}
+
+function buildEscalationReport(escalations) {
+  const rows = [
+    ...escalations.overdueApprovals.map((approval) => ({
+      category: "overdue_approval",
+      severity: approval.riskBand === "critical" ? "critical" : "high",
+      releaseId: approval.releaseId,
+      application: approval.application,
+      version: approval.version,
+      environment: approval.environment,
+      owner: approval.owner,
+      team: approval.team,
+      ageHours: approval.ageHours,
+      detail: `${approval.displayName} approval is overdue by policy.`,
+      recommendedAction: `Escalate to ${approval.displayName} and ${approval.owner}.`
+    })),
+    ...escalations.highRiskPending.map((release) => ({
+      category: "high_risk_pending",
+      severity: release.riskBand === "critical" ? "critical" : "high",
+      releaseId: release.releaseId,
+      application: release.application,
+      version: release.version,
+      environment: release.environment,
+      owner: release.owner,
+      team: release.pendingTeams.join(","),
+      ageHours: null,
+      detail: `${release.riskBand} release is waiting on ${release.pendingTeams.length} approval(s).`,
+      recommendedAction: "Hold deployment until required approvals are complete."
+    })),
+    ...escalations.conflictRisks.map((release) => ({
+      category: "release_window_conflict",
+      severity: release.status === "pending_approval" ? "high" : "medium",
+      releaseId: release.releaseId,
+      application: release.application,
+      version: release.version,
+      environment: release.environment,
+      owner: null,
+      team: null,
+      ageHours: null,
+      detail: `${release.conflictCount} overlapping release window(s) detected.`,
+      recommendedAction: "Resolve calendar collision before scheduling or deployment."
+    }))
+  ].sort(compareReportRows);
+
+  const severityCounts = rows.reduce(
+    (counts, row) => ({
+      ...counts,
+      [row.severity]: counts[row.severity] + 1
+    }),
+    { critical: 0, high: 0, medium: 0, low: 0 }
+  );
+  const topSeverity = ["critical", "high", "medium", "low"].find(
+    (severity) => severityCounts[severity] > 0
+  );
+
+  const report = {
+    reportId: "",
+    generatedAt: escalations.generatedAt,
+    title: "Release Guardian Escalation Report",
+    executiveSummary: {
+      totalEscalations: rows.length,
+      topSeverity: topSeverity || "none",
+      counts: {
+        ...escalations.counts,
+        bySeverity: severityCounts
+      },
+      narrative: buildEscalationNarrative(escalations.counts, severityCounts)
+    },
+    recommendedActions: buildEscalationActions(escalations.counts, severityCounts),
+    rows
+  };
+
+  report.reportId = createStableReportId(report);
+  return report;
+}
+
+function compareReportRows(left, right) {
+  const severityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+  const severityDelta = severityOrder[left.severity] - severityOrder[right.severity];
+  if (severityDelta !== 0) {
+    return severityDelta;
+  }
+
+  const categoryDelta = left.category.localeCompare(right.category);
+  if (categoryDelta !== 0) {
+    return categoryDelta;
+  }
+
+  return left.releaseId.localeCompare(right.releaseId);
+}
+
+function buildEscalationNarrative(counts, severityCounts) {
+  if (
+    counts.overdueApprovals === 0 &&
+    counts.highRiskPending === 0 &&
+    counts.conflictRisks === 0
+  ) {
+    return "No active release escalations were detected.";
+  }
+
+  const parts = [];
+  if (severityCounts.critical > 0) {
+    parts.push(`${severityCounts.critical} critical escalation(s) require immediate attention`);
+  }
+  if (counts.overdueApprovals > 0) {
+    parts.push(`${counts.overdueApprovals} overdue approval(s) are breaching SLA`);
+  }
+  if (counts.highRiskPending > 0) {
+    parts.push(`${counts.highRiskPending} high-risk release(s) are waiting for approval`);
+  }
+  if (counts.conflictRisks > 0) {
+    parts.push(`${counts.conflictRisks} release-window conflict group(s) need scheduling review`);
+  }
+
+  return `${parts.join("; ")}.`;
+}
+
+function buildEscalationActions(counts, severityCounts) {
+  const actions = [];
+
+  if (severityCounts.critical > 0) {
+    actions.push({
+      priority: "P0",
+      owner: "release_management",
+      action: "Start an immediate release governance review for critical escalations."
+    });
+  }
+  if (counts.overdueApprovals > 0) {
+    actions.push({
+      priority: "P1",
+      owner: "release_management",
+      action: "Page approval owners and record the response decision in the release timeline."
+    });
+  }
+  if (counts.highRiskPending > 0) {
+    actions.push({
+      priority: "P1",
+      owner: "service_owner",
+      action: "Block deployment automation until all required approvals are approved."
+    });
+  }
+  if (counts.conflictRisks > 0) {
+    actions.push({
+      priority: "P2",
+      owner: "release_manager",
+      action: "Move or merge overlapping release windows before scheduling production changes."
+    });
+  }
+
+  if (actions.length === 0) {
+    actions.push({
+      priority: "P3",
+      owner: "release_management",
+      action: "Continue routine monitoring; no active escalation remediation is required."
+    });
+  }
+
+  return actions;
+}
+
+function createStableReportId(report) {
+  const digest = createHash("sha256")
+    .update(JSON.stringify({ generatedAt: report.generatedAt, rows: report.rows }))
+    .digest("hex")
+    .slice(0, 16);
+  return `esc-${digest}`;
 }
 
 function validateReleaseInput(input) {

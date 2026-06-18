@@ -280,6 +280,37 @@ test("getEscalations summarizes overdue approvals, high-risk pending releases, a
   assert.equal(escalations.overdueApprovals[0].ageHours, 10.5);
 });
 
+test("getEscalationReport creates an auditable executive escalation report", async () => {
+  const repository = await createFixtureRepository();
+  let currentTime = "2026-06-18T00:00:00.000Z";
+  const service = new ReleaseService(repository, () => currentTime);
+
+  await service.createRelease(buildPayload());
+  await service.createRelease({
+    ...buildPayload(),
+    version: "2026.06.18-overlap",
+    plannedStartAt: "2026-06-20T08:30:00.000Z",
+    plannedEndAt: "2026-06-20T10:00:00.000Z"
+  });
+
+  currentTime = "2026-06-18T10:30:00.000Z";
+  const report = await service.getEscalationReport();
+  const repeatedReport = await service.getEscalationReport();
+
+  assert.match(report.reportId, /^esc-[a-f0-9]{16}$/);
+  assert.equal(report.reportId, repeatedReport.reportId);
+  assert.equal(report.executiveSummary.totalEscalations, 10);
+  assert.equal(report.executiveSummary.topSeverity, "critical");
+  assert.equal(report.executiveSummary.counts.bySeverity.critical, 8);
+  assert.equal(report.executiveSummary.counts.bySeverity.high, 2);
+  assert.equal(report.rows[0].category, "high_risk_pending");
+  assert.equal(report.rows[0].severity, "critical");
+  assert.ok(report.recommendedActions.some((item) => item.priority === "P0"));
+  assert.ok(
+    report.rows.some((row) => row.category === "release_window_conflict" && row.severity === "high")
+  );
+});
+
 test("getPolicy returns governance rules and score bounds", async () => {
   const repository = await createFixtureRepository();
   const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");

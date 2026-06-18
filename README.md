@@ -22,6 +22,7 @@ The project is intentionally implemented with modern built-in Node.js capabiliti
 - Deployment scheduling and execution recording
 - Audit timeline for every important action
 - Dashboard metrics for governance and change performance
+- Executive escalation reports with stable audit identifiers
 - OpenAPI contract for downstream integration
 - Containerized runtime and CI workflow
 - Multilingual documentation for global teams
@@ -173,6 +174,17 @@ Returns governance aggregates:
 ### `GET /api/escalations`
 
 Returns an operational escalation summary for overdue approvals, high-risk pending releases, and release-window conflicts.
+
+### `GET /api/escalations/report`
+
+Returns an auditable executive escalation report with:
+
+- Stable report identifier
+- Total escalation count
+- Severity distribution
+- Narrative executive summary
+- Recommended remediation actions
+- Machine-readable report rows
 
 ### `GET /api/policy`
 
@@ -338,6 +350,12 @@ curl http://localhost:3000/api/releases/<releaseId>/conflicts
 curl http://localhost:3000/api/escalations
 ```
 
+### Export Executive Escalation Report
+
+```bash
+curl http://localhost:3000/api/escalations/report
+```
+
 ## 12. Verification
 
 Recommended local verification sequence:
@@ -364,6 +382,7 @@ The project currently includes:
 - Audit evidence package tests
 - Release-window conflict tests
 - Operational escalation tests
+- Executive escalation report tests
 
 Recommended next-stage additions:
 

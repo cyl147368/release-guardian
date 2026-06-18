@@ -210,6 +210,27 @@ test("GET /api/escalations returns operational escalation summary", async () => 
   assert.equal(body.data.highRiskPending[0].application, "ops-portal");
 });
 
+test("GET /api/escalations/report returns executive escalation report", async () => {
+  const app = await createFixtureApp();
+  const payload = createPayload();
+  payload.environment = "production";
+  payload.serviceTier = "tier_1";
+  payload.components = ["frontend", "api"];
+  payload.controls.customerImpactScore = 4;
+  payload.controls.dataSensitivityScore = 5;
+
+  await app(buildRequest("POST", "/api/releases", payload));
+  const response = await app(buildRequest("GET", "/api/escalations/report"));
+  const body = JSON.parse(response.body);
+
+  assert.equal(response.statusCode, 200);
+  assert.match(body.data.reportId, /^esc-[a-f0-9]{16}$/);
+  assert.equal(body.data.title, "Release Guardian Escalation Report");
+  assert.equal(body.data.executiveSummary.totalEscalations, 1);
+  assert.equal(body.data.rows[0].category, "high_risk_pending");
+  assert.equal(body.data.recommendedActions[0].priority, "P0");
+});
+
 test("POST /api/releases rejects score bounds outside policy", async () => {
   const app = await createFixtureApp();
   const payload = createPayload();

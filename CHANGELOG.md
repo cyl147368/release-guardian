@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
+## 1.3.0 - 2026-06-18
+
+### Added
+
+- Executive escalation report endpoint at `GET /api/escalations/report`
+- Stable escalation report identifiers for audit traceability
+- Severity distribution, executive narrative, recommended remediation actions, and machine-readable report rows
+- Service and API tests for the escalation report contract
+
+### Changed
+
+- OpenAPI, README, and package metadata now describe the expanded reporting surface
+
 ## 1.2.0 - 2026-06-18
 
 ### Added
