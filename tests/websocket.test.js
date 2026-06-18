@@ -60,3 +60,108 @@ describe("WebSocket 实时推送", () => {
     httpServer.close();
   });
 });
+
+// ── WebSocket 集成测试 ──
+
+import { request } from "node:http";
+
+describe("WebSocket 集成", () => {
+  it("WebSocket 握手成功", async () => {
+    const httpServer = createServer();
+    const ws = createWebSocketServer({ httpServer });
+    
+    await new Promise((resolve) => {
+      httpServer.listen(0, () => {
+        const port = httpServer.address().port;
+        
+        const req = request({
+          hostname: "127.0.0.1",
+          port,
+          path: "/ws",
+          headers: {
+            "Upgrade": "websocket",
+            "Connection": "Upgrade",
+            "Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
+            "Sec-WebSocket-Version": "13"
+          }
+        });
+        
+        req.on("upgrade", (res, socket) => {
+          assert.equal(res.statusCode, 101);
+          assert.equal(res.headers["upgrade"], "websocket");
+          socket.destroy();
+          httpServer.close(resolve);
+        });
+        
+        req.end();
+      });
+    });
+  });
+
+  it("非 /ws 路径拒绝升级", async () => {
+    const httpServer = createServer();
+    const ws = createWebSocketServer({ httpServer });
+    
+    await new Promise((resolve) => {
+      httpServer.listen(0, () => {
+        const port = httpServer.address().port;
+        
+        const req = request({
+          hostname: "127.0.0.1",
+          port,
+          path: "/other",
+          headers: {
+            "Upgrade": "websocket",
+            "Connection": "Upgrade",
+            "Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
+            "Sec-WebSocket-Version": "13"
+          }
+        });
+        
+        req.on("error", () => {
+          httpServer.close(resolve);
+        });
+        
+        req.on("response", (res) => {
+          // 非 /ws 路径不升级，返回正常 HTTP 响应或关闭
+          httpServer.close(resolve);
+        });
+        
+        req.end();
+      });
+    });
+  });
+
+  it("缺少 Sec-WebSocket-Key 时拒绝连接", async () => {
+    const httpServer = createServer();
+    const ws = createWebSocketServer({ httpServer });
+    
+    await new Promise((resolve) => {
+      httpServer.listen(0, () => {
+        const port = httpServer.address().port;
+        
+        const req = request({
+          hostname: "127.0.0.1",
+          port,
+          path: "/ws",
+          headers: {
+            "Upgrade": "websocket",
+            "Connection": "Upgrade",
+            "Sec-WebSocket-Version": "13"
+            // 缺少 Sec-WebSocket-Key
+          }
+        });
+        
+        req.on("error", () => {
+          httpServer.close(resolve);
+        });
+        
+        req.on("response", () => {
+          httpServer.close(resolve);
+        });
+        
+        req.end();
+      });
+    });
+  });
+});

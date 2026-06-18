@@ -633,3 +633,84 @@ test("审计日志在审批操作时自动记录", async () => {
   assert.equal(result.total, 1);
   assert.equal(result.items[0].actor, "bob");
 });
+
+// ── 错误处理和边界情况测试 ──
+
+test("GET /api/releases/invalid-id 返回 404", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("GET", "/api/releases/nonexistent-id-12345"));
+  assert.equal(response.statusCode, 404);
+  const body = JSON.parse(response.body);
+  assert.equal(body.error.code, "not_found");
+});
+
+test("POST /api/releases/invalid-id/approvals 返回 404", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("POST", "/api/releases/invalid-id/approvals", {
+    team: "release_management",
+    decision: "approved",
+    actor: "bob"
+  }));
+  assert.equal(response.statusCode, 404);
+});
+
+test("POST /api/releases/invalid-id/schedule 返回错误", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("POST", "/api/releases/invalid-id/schedule", {
+    scheduledBy: "ops"
+  }));
+  assert.ok(response.statusCode >= 400);
+});
+
+test("POST /api/releases/invalid-id/deploy 返回错误", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("POST", "/api/releases/invalid-id/deploy", {
+    deployedBy: "ops"
+  }));
+  assert.ok(response.statusCode >= 400);
+});
+
+test("GET /api/releases/invalid-id/evidence 返回 404", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("GET", "/api/releases/invalid-id/evidence"));
+  assert.equal(response.statusCode, 404);
+});
+
+test("GET /api/releases/invalid-id/conflicts 返回 404", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("GET", "/api/releases/invalid-id/conflicts"));
+  assert.equal(response.statusCode, 404);
+});
+
+test("DELETE /api/webhooks/invalid-id 返回 404", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("DELETE", "/api/webhooks/nonexistent-id"));
+  assert.equal(response.statusCode, 404);
+});
+
+test("POST /api/releases/bulk 超过 50 项返回 400", async () => {
+  const app = await createFixtureApp();
+  const releases = Array.from({ length: 51 }, (_, i) => ({
+    application: `app-${i}`,
+    version: `${i}.0.0`,
+    environment: "development",
+    serviceTier: "tier_3",
+    changeCategory: "standard",
+    plannedStartAt: "2026-07-01T10:00:00Z",
+    plannedEndAt: "2026-07-01T12:00:00Z",
+    summary: "Bulk test",
+    components: ["api"],
+    owner: "test",
+    controls: { automatedTestsPassed: true, rollbackReady: true, monitoringReady: true, securityReviewed: true, customerImpactScore: 0, dataSensitivityScore: 0 }
+  }));
+  const response = await app(buildRequest("POST", "/api/releases/bulk", { releases }));
+  assert.ok(response.statusCode >= 400);
+});
+
+test("GET /nonexistent 返回 404", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("GET", "/nonexistent-path"));
+  assert.equal(response.statusCode, 404);
+  const body = JSON.parse(response.body);
+  assert.equal(body.error.code, "not_found");
+});

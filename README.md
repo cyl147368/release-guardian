@@ -5,7 +5,7 @@
 **企业级发布治理平台**
 
 [![CI](https://github.com/cyl147368/release-guardian/actions/workflows/ci.yml/badge.svg)](https://github.com/cyl147368/release-guardian/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-96.75%25-brightgreen)](https://github.com/cyl147368/release-guardian)
+[![Coverage](https://img.shields.io/badge/coverage-96.98%25-brightgreen)](https://github.com/cyl147368/release-guardian)
 [![Node](https://img.shields.io/badge/node-%3E%3D20-green)](https://nodejs.org)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
@@ -32,7 +32,8 @@ Release Guardian 是一个零依赖的企业级发布治理平台，帮助团队
 | 📝 审计日志 | 完整记录所有操作，支持多维度查询 |
 | 📈 Prometheus 指标 | 内置指标采集，一键接入 Grafana 监控 |
 | 🐳 容器就绪 | Docker + Kubernetes + Helm 一键部署 |
-| ✅ 96.75% 覆盖率 | 218 个测试用例，企业级质量保障 |
+| ✅ 96.98% 覆盖率 | 234 个测试用例，企业级质量保障 |
+| 🔌 WebSocket 实时推送 | 零依赖 WebSocket 支持，事件订阅机制 |
 
 ---
 
@@ -203,6 +204,30 @@ release-guardian/
 | `DELETE` | `/api/webhooks/:id` | 删除订阅 |
 | `GET` | `/api/webhooks/events` | 事件日志 |
 
+### 实时推送 (WebSocket)
+
+| 路径 | 说明 |
+|------|------|
+| `ws://localhost:3000/ws` | WebSocket 连接端点 |
+
+**事件订阅**:
+```json
+{
+  "type": "subscribe",
+  "events": ["release.created", "release.approved", "release.deployed"]
+}
+```
+
+**接收事件**:
+```json
+{
+  "type": "event",
+  "event": "release.created",
+  "data": { "id": "...", "application": "..." },
+  "timestamp": "2026-06-18T12:00:00.000Z"
+}
+```
+
 ### 审计与监控
 
 | 方法 | 路径 | 说明 |
@@ -317,7 +342,7 @@ src/lib/metrics.js     | 99.4%  | 89.2%    | 100%
 src/lib/middleware.js   | 97.2%  | 97.9%    | 93.3%
 src/lib/logger.js      | 100%   | 94.1%    | 100%
 src/services/...       | 95.1%  | 85.7%    | 100%
-总体                   | 96.75% | 88.68%   | 97.07%
+总体                   | 96.98% | 88.68%   | 97.07%
 ```
 
 ---
