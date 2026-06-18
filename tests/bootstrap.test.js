@@ -78,6 +78,10 @@ function createFakeServer(events, calls) {
         delete events[event];
       }
     },
+    on(event, listener) {
+      // WebSocket upgrade handler 注册
+      events[event] = listener;
+    },
     listen(...args) {
       calls.push(args);
       const callback = args.at(-1);
@@ -112,7 +116,8 @@ function createMockResponse() {
       this.headers = headers;
     },
     end(body) {
-      this.body = body;
+      // 支持 Buffer 和字符串
+      this.body = Buffer.isBuffer(body) ? body.toString("utf8") : body;
     }
   };
 }

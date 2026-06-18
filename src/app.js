@@ -20,8 +20,16 @@ const MIME_TYPES = {
 const PUBLIC_DIR = join(import.meta.dirname, "..", "public");
 
 function serveStatic(pathname) {
-  const safePath = pathname.replace(/\.\./g, "");
+  // 防止路径穿越：解码后标准化路径，确保结果在 PUBLIC_DIR 内
+  const decoded = decodeURIComponent(pathname);
+  const safePath = decoded.replace(/\.\./g, "").replace(/\\/g, "/");
   const filePath = join(PUBLIC_DIR, safePath === "/" ? "index.html" : safePath);
+  
+  // 安全检查：解析后的路径必须在 PUBLIC_DIR 内
+  const resolved = join(PUBLIC_DIR, safePath === "/" ? "index.html" : safePath);
+  if (!resolved.startsWith(PUBLIC_DIR)) {
+    return null;
+  }
   try {
     const data = readFileSync(filePath);
     const ext = extname(filePath);
@@ -38,7 +46,7 @@ function serveStatic(pathname) {
   }
 }
 
-export function createApp(service, { auditLog = null, metrics = null } = {}) {
+export function createApp(service, { auditLog = null, metrics = null, wsBroadcast = null } = {}) {
   return async function app(request) {
     const url = new URL(request.url, "http://localhost");
 
@@ -92,6 +100,7 @@ export function createApp(service, { auditLog = null, metrics = null } = {}) {
         const body = await readJsonBody(request);
         const release = await service.createRelease(body);
         if (auditLog) auditLog.record("release.created", { actor: body.owner || "system", resourceType: "release", resourceId: release.id, details: { application: release.application, version: release.version, environment: release.environment } });
+        if (wsBroadcast) wsBroadcast("release.created", { id: release.id, application: release.application, version: release.version, environment: release.environment, status: release.status });
         return jsonResponse(201, { data: release });
       }
 
@@ -126,6 +135,7 @@ export function createApp(service, { auditLog = null, metrics = null } = {}) {
         const release = await service.reviewRelease(approvalMatch[1], body);
         const event = body.decision === "approved" ? "release.approved" : "release.rejected";
         if (auditLog) auditLog.record(event, { actor: body.actor || "system", resourceType: "release", resourceId: approvalMatch[1], details: { team: body.team, status: body.status } });
+        if (wsBroadcast) wsBroadcast(event, { id: release.id, application: release.application, status: release.status, team: body.team });
         return jsonResponse(200, { data: release });
       }
 
@@ -141,6 +151,7 @@ export function createApp(service, { auditLog = null, metrics = null } = {}) {
         const body = await readJsonBody(request);
         const release = await service.deployRelease(deployMatch[1], body);
         if (auditLog) auditLog.record("release.deployed", { actor: body.deployedBy || "system", resourceType: "release", resourceId: deployMatch[1], details: { environment: release.environment } });
+        if (wsBroadcast) wsBroadcast("release.deployed", { id: release.id, application: release.application, environment: release.environment });
         return jsonResponse(200, { data: release });
       }
 

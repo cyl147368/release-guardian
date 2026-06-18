@@ -5,6 +5,7 @@ import { createAuditLog } from "./lib/audit.js";
 import { sendResponse } from "./lib/http.js";
 import { createLogger } from "./lib/logger.js";
 import { createMetrics } from "./lib/metrics.js";
+import { createWebSocketServer } from "./lib/websocket.js";
 import {
   withApiKeyAuth,
   withBodySizeLimit,
@@ -38,7 +39,10 @@ export function createRuntime({
   const auditLog = createAuditLog();
   const metrics = createMetrics();
 
-  let app = createApp(service, { auditLog, metrics });
+  // 创建 WebSocket 服务器（延迟初始化，需要 HTTP server 实例）
+  let wsServer = null;
+  
+  let app = createApp(service, { auditLog, metrics, wsBroadcast: (event, data) => wsServer?.broadcast(event, data) });
 
   // 中间件管道：指标记录 → 安全头 → CORS → 内容类型验证 → 请求体限制 → 认证 → 速率限制 → 请求日志 → 应用
   app = withMetrics(app, metrics);
@@ -53,6 +57,18 @@ export function createRuntime({
   const server = createServerImpl(async (request, response) => {
     const payload = await app(request);
     sendResponse(response, payload);
+  });
+
+  // 初始化 WebSocket 服务器
+  wsServer = createWebSocketServer({
+    httpServer: server,
+    onConnection: (clientId) => {
+      structuredLogger.info("ws_client_connected", { clientId });
+      metrics.recordRequest("WS", "/ws", 101, 0);
+    },
+    onDisconnect: (clientId) => {
+      structuredLogger.info("ws_client_disconnected", { clientId });
+    },
   });
 
   // 优雅关闭
@@ -97,7 +113,7 @@ export function createRuntime({
     });
   }
 
-  return { app, server, listen, auditLog, metrics };
+  return { app, server, listen, auditLog, metrics, wsServer };
 }
 
 /**

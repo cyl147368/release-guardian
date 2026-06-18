@@ -138,7 +138,7 @@ export function withRateLimit(app, { maxRequests = 100, windowMs = 60_000 } = {}
  */
 export function withApiKeyAuth(app, {
   apiKeys = [],
-  whitelistedPaths = ["/health", "/ready"]
+  whitelistedPaths = ["/health", "/ready", "/metrics", "/api/metrics"]
 } = {}) {
   const keySet = new Set(apiKeys);
 
@@ -215,7 +215,7 @@ export function withCors(app, {
 /**
  * Adds standard security headers to all responses.
  */
-export function withSecurityHeaders(app, { csp = "default-src 'none'" } = {}) {
+export function withSecurityHeaders(app, { csp = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https:; connect-src 'self' ws: wss:" } = {}) {
   return async function secureApp(request) {
     const payload = await app(request);
     payload.headers = {

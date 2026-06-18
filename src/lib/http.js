@@ -41,8 +41,17 @@ export async function readJsonBody(request) {
 }
 
 export function sendResponse(response, payload) {
-  response.writeHead(payload.statusCode, payload.headers);
-  response.end(payload.body);
+  const body = payload.body || "";
+  const buffer = typeof body === "string" ? Buffer.from(body, "utf8") : body;
+  
+  // 自动设置 Content-Length
+  const headers = {
+    ...payload.headers,
+    "content-length": String(buffer.length),
+  };
+  
+  response.writeHead(payload.statusCode, headers);
+  response.end(buffer);
 }
 
 export class HttpError extends Error {

@@ -183,10 +183,20 @@ export function createWebSocketServer({ httpServer, onConnection, onMessage, onD
       timestamp: new Date().toISOString(),
     });
     
-    for (const [, client] of clients) {
+    const deadClients = [];
+    for (const [id, client] of clients) {
       if (client.subscriptions.has("*") || client.subscriptions.has(event)) {
-        client.socket.write(encodeFrame(message));
+        try {
+          client.socket.write(encodeFrame(message));
+        } catch {
+          // Socket 已断开，标记为待清理
+          deadClients.push(id);
+        }
       }
+    }
+    // 清理断开的客户端
+    for (const id of deadClients) {
+      clients.delete(id);
     }
   }
   
