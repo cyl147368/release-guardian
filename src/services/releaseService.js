@@ -21,6 +21,7 @@ const RELEASE_STATUS = [
   "rolled_back"
 ];
 const APPROVAL_STATUS = ["pending", "approved", "rejected"];
+const SERVICE_VERSION = "1.4.0";
 
 export class ReleaseService {
   constructor(repository, clock = nowIso) {
@@ -36,6 +37,41 @@ export class ReleaseService {
       .filter((release) => matchesReleaseFilters(release, query))
       .sort((left, right) => compareReleases(left, right, query.sort, query.order))
       .slice(query.offset, query.offset + query.limit);
+  }
+
+  async getReadiness() {
+    const generatedAt = this.clock();
+
+    try {
+      const db = await this.repository.load();
+      const releaseCount = Array.isArray(db.releases) ? db.releases.length : 0;
+      const teamCount = Array.isArray(db.teams) ? db.teams.length : 0;
+
+      return {
+        status: "ready",
+        generatedAt,
+        version: SERVICE_VERSION,
+        checks: {
+          datastore: {
+            status: "ok",
+            releaseCount,
+            teamCount
+          }
+        }
+      };
+    } catch (error) {
+      return {
+        status: "not_ready",
+        generatedAt,
+        version: SERVICE_VERSION,
+        checks: {
+          datastore: {
+            status: "error",
+            message: error.message
+          }
+        }
+      };
+    }
   }
 
   async getRelease(releaseId) {

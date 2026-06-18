@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## 1.4.0 - 2026-06-18
+
+### Added
+
+- Readiness probe at `GET /ready` with datastore health checks
+- Service and API tests for readiness endpoint (200 ready, 503 not ready)
+- Readiness and ReadinessResponse schemas in OpenAPI contract
+
+### Changed
+
+- Version bumped to 1.4.0 across package metadata, service, and OpenAPI
+
 ## 1.3.0 - 2026-06-18
 
 ### Added

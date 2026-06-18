@@ -39,7 +39,7 @@ SOCKET_PATH=/tmp/release-guardian.sock npm start
 Build the image:
 
 ```bash
-docker build -t release-guardian:1.3.0 .
+docker build -t release-guardian:1.4.0 .
 ```
 
 Run the service:
@@ -49,7 +49,7 @@ docker run \
   --name release-guardian \
   -p 3000:3000 \
   -v "$(pwd)/data:/app/data" \
-  release-guardian:1.3.0
+  release-guardian:1.4.0
 ```
 
 ## Environment Variables

@@ -60,6 +60,41 @@ test("GET /health returns ok", async () => {
   assert.equal(response.body, "ok");
 });
 
+test("GET /ready returns structured readiness payload", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("GET", "/ready"));
+  const body = JSON.parse(response.body);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.data.status, "ready");
+  assert.equal(body.data.version, "1.4.0");
+  assert.equal(body.data.checks.datastore.status, "ok");
+});
+
+test("GET /ready returns 503 when readiness checks fail", async () => {
+  const app = createApp({
+    async getReadiness() {
+      return {
+        status: "not_ready",
+        generatedAt: "2026-06-18T00:00:00.000Z",
+        version: "1.4.0",
+        checks: {
+          datastore: {
+            status: "error",
+            message: "datastore unavailable"
+          }
+        }
+      };
+    }
+  });
+  const response = await app(buildRequest("GET", "/ready"));
+  const body = JSON.parse(response.body);
+
+  assert.equal(response.statusCode, 503);
+  assert.equal(body.data.status, "not_ready");
+  assert.equal(body.data.checks.datastore.message, "datastore unavailable");
+});
+
 test("POST /api/releases creates a release", async () => {
   const app = await createFixtureApp();
   const response = await app(buildRequest("POST", "/api/releases", createPayload()));

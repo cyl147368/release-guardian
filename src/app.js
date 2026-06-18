@@ -11,6 +11,12 @@ export function createApp(service) {
         return textResponse(200, "ok");
       }
 
+      if (request.method === "GET" && url.pathname === "/ready") {
+        const readiness = await service.getReadiness();
+        const statusCode = readiness.status === "ready" ? 200 : 503;
+        return jsonResponse(statusCode, { data: readiness }, { etag: etagFor(readiness) });
+      }
+
       if (request.method === "GET" && url.pathname === "/api/releases") {
         const releases = await service.listReleases(Object.fromEntries(url.searchParams));
         return jsonResponse(200, { data: releases }, { etag: etagFor(releases) });

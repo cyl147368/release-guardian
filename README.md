@@ -114,6 +114,22 @@ Risk is calculated from:
 
 Returns a plain-text health response.
 
+### `GET /ready`
+
+Returns a JSON readiness response. Returns `200` with `status: "ready"` when the service can accept traffic, or `503` with `status: "not_ready"` when the datastore is unhealthy.
+
+```bash
+curl -s http://localhost:3000/ready | jq .
+```
+
+Response fields:
+
+- `status`: `ready` or `not_ready`
+- `version`: running service version
+- `checks.datastore.status`: `ok` or `error`
+- `checks.datastore.releaseCount`: total releases in the datastore
+- `checks.datastore.teamCount`: total teams in the datastore
+
 ### `GET /api/releases`
 
 Returns all releases sorted by creation time.

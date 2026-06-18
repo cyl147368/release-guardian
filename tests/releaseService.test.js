@@ -54,6 +54,36 @@ test("createRelease computes high risk and approval chain for production tier_1 
   assert.equal(release.approvals.every((item) => item.status === "pending"), true);
 });
 
+test("getReadiness reports datastore health and service metadata", async () => {
+  const repository = await createFixtureRepository();
+  const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");
+
+  const readiness = await service.getReadiness();
+
+  assert.equal(readiness.status, "ready");
+  assert.equal(readiness.version, "1.4.0");
+  assert.equal(readiness.checks.datastore.status, "ok");
+  assert.equal(readiness.checks.datastore.releaseCount, 0);
+  assert.equal(readiness.checks.datastore.teamCount, 3);
+});
+
+test("getReadiness reports not_ready when datastore cannot be loaded", async () => {
+  const service = new ReleaseService(
+    {
+      async load() {
+        throw new Error("datastore unavailable");
+      }
+    },
+    () => "2026-06-18T00:00:00.000Z"
+  );
+
+  const readiness = await service.getReadiness();
+
+  assert.equal(readiness.status, "not_ready");
+  assert.equal(readiness.checks.datastore.status, "error");
+  assert.equal(readiness.checks.datastore.message, "datastore unavailable");
+});
+
 test("reviewRelease transitions to approved once all teams approve", async () => {
   const repository = await createFixtureRepository();
   const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Release Guardian API
-  version: 1.3.0
+  version: 1.4.0
   description: Enterprise-grade release governance and audit API.
 servers:
   - url: http://localhost:3000
@@ -23,6 +23,24 @@ paths:
               schema:
                 type: string
               example: ok
+  /ready:
+    get:
+      tags: [Health]
+      summary: Readiness probe
+      description: Returns 200 when the service is ready to accept traffic, 503 when the datastore is unhealthy.
+      responses:
+        "200":
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessResponse"
+        "503":
+          description: Service is not ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessResponse"
   /api/releases:
     get:
       tags: [Releases]
@@ -978,6 +996,40 @@ components:
           properties:
             data:
               $ref: "#/components/schemas/EscalationReport"
+    Readiness:
+      type: object
+      required: [status, generatedAt, version, checks]
+      properties:
+        status:
+          type: string
+          enum: [ready, not_ready]
+        generatedAt:
+          type: string
+          format: date-time
+        version:
+          type: string
+        checks:
+          type: object
+          properties:
+            datastore:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [ok, error]
+                releaseCount:
+                  type: integer
+                teamCount:
+                  type: integer
+                message:
+                  type: string
+    ReadinessResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Readiness"
     PolicyResponse:
       allOf:
         - $ref: "#/components/schemas/ApiEnvelope"
