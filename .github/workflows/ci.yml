@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   lint:
-    name: Lint
+    name: 代码规范检查
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,7 +23,7 @@ jobs:
       - run: npm run lint
 
   test:
-    name: Test (Node ${{ matrix.node-version }})
+    name: 单元测试 (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -39,7 +39,7 @@ jobs:
       - run: npm test
 
   coverage:
-    name: Coverage
+    name: 覆盖率检查
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,19 +48,19 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - name: Run tests with coverage
+      - name: 运行测试并生成覆盖率报告
         run: npm run test:coverage 2>&1 | tee coverage-output.txt
-      - name: Enforce coverage threshold
+      - name: 检查覆盖率阈值
         run: |
           COVERAGE=$(grep -oP 'all files.*?\K(\d+\.?\d*)' coverage-output.txt | head -1 || echo "0")
-          echo "Line coverage: ${COVERAGE}%"
+          echo "行覆盖率: ${COVERAGE}%"
           if [ "$(echo "$COVERAGE < 80" | bc -l)" -eq 1 ]; then
-            echo "::error::Coverage ${COVERAGE}% is below the 80% threshold"
+            echo "::error::覆盖率 ${COVERAGE}% 低于 80% 阈值"
             exit 1
           fi
 
   openapi:
-    name: OpenAPI Contract
+    name: OpenAPI 契约测试
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -69,5 +69,35 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - name: Validate OpenAPI spec
+      - name: 验证 OpenAPI 规范
         run: node --test tests/openapi.test.js
+
+  quality:
+    name: 综合质量门禁
+    runs-on: ubuntu-latest
+    needs: [lint, test, coverage, openapi]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: 运行完整质量检查
+        run: npm run quality
+
+  docker:
+    name: Docker 构建验证
+    runs-on: ubuntu-latest
+    needs: [quality]
+    steps:
+      - uses: actions/checkout@v4
+      - name: 构建 Docker 镜像
+        run: docker build -t release-guardian:test .
+      - name: 验证容器启动
+        run: |
+          docker run -d --name rg-test -p 3000:3000 release-guardian:test
+          sleep 3
+          curl -sf http://localhost:3000/health | grep -q "ok"
+          curl -sf http://localhost:3000/ | grep -q "Release Guardian"
+          docker stop rg-test
