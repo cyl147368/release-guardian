@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented in this file.
 
+## 1.9.0 - 2026-06-18
+
+### Added
+
+- CONTRIBUTING.md with development workflow, code style, and PR guidelines
+- Enhanced seed script with 5 diverse demo releases across environments and risk levels
+- Unit tests for time utilities: nowIso, addHours, compareIso (6 tests)
+- Unit tests for validation utilities: assertString, assertArray, assertEnum, assertIntegerRange, assertIsoTimestamp (12 tests)
+- App-level tests for webhook CRUD, bulk create, readiness probe, and 404 handling (8 tests)
+- Expanded OpenAPI contract tests verifying all 17 endpoints, all response schemas, and webhook/bulk tags (3 tests)
+- .env.example with all environment variable documentation
+
+### Changed
+
+- OpenAPI contract tests now verify all 17 endpoints (health, ready, releases, bulk, evidence, conflicts, approvals, schedule, deploy, dashboard, escalations, escalation report, policy, webhooks, webhook events)
+- Test coverage improved to 93.54% line coverage with 121 total tests
+
 ## 1.8.1 - 2026-06-18
 
 ### Added

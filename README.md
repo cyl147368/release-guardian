@@ -545,27 +545,27 @@ The automated test suite also checks that the OpenAPI contract continues to decl
 
 ## 13. Testing Strategy
 
-The project currently includes:
+The project includes 121 automated tests across 17 test suites:
 
-- Service-layer lifecycle tests
-- Approval workflow tests
-- Scheduling guardrail tests
-- Deployment metric tests
-- API smoke tests
-- Governance filter tests
+- Service-layer lifecycle tests (create, list, get, filter, paginate)
+- Approval workflow tests (approve, reject, SLA tracking)
+- Scheduling guardrail tests (release-window conflict blocking)
+- Deployment metric tests (deploy, dashboard, change failure rate)
+- API smoke tests (all 17 HTTP endpoints)
+- Governance filter tests (environment, status, risk band, application, owner)
 - Policy endpoint tests
 - Audit evidence package and traceability tests
 - Release-window conflict tests
 - Operational escalation tests
 - Executive escalation report tests
-- OpenAPI contract guardrail tests
+- Bulk release creation tests (success, partial failure, validation)
+- Webhook subscription and event dispatch tests
+- Structured logger tests (levels, child loggers, structured output)
+- Middleware tests (request logging, rate limiting, API key auth, CORS, security headers)
+- Time and validation utility tests
+- OpenAPI contract guardrail tests (all 17 endpoints, schemas, response codes)
 
-Recommended next-stage additions:
-
-- Property-based tests for risk scoring
-- Concurrency tests for repository writes
-- Contract tests against the OpenAPI document
-- End-to-end tests with a browser-based operations UI
+Coverage: 93.54% line coverage, 85.59% branch coverage, 95.24% function coverage.
 
 ## 14. Operational Concerns
 
@@ -600,13 +600,21 @@ Suggested production hardening:
 
 ## 15. Delivery Contents
 
-- Source code
-- Test suite
-- Dockerfile
-- GitHub Actions workflow
-- OpenAPI contract
-- Seed data
-- Multilingual documentation
+- Source code (11 source modules)
+- Test suite (121 tests, 93.54% line coverage)
+- Multi-stage Dockerfile with non-root user and health check
+- docker-compose.yml (production + development profiles)
+- GitHub Actions CI (multi-Node matrix, coverage threshold, OpenAPI contract tests)
+- Kubernetes manifests (Kustomize base + staging/production overlays)
+- Helm chart (configurable replicas, ingress, autoscaling, persistence, secrets)
+- OpenAPI 3.1 contract (17 endpoints, full schemas)
+- Load test benchmark script
+- Database migration documentation (PostgreSQL schema, adapter pattern, zero-downtime guide)
+- Security documentation with hardening checklist
+- Contributing guidelines
+- Environment variable reference (.env.example)
+- Seed data with 5 diverse demo releases
+- Multilingual documentation (EN, zh-CN, zh-TW, JA, KO)
 
 ## 16. Multilingual Overview
 
