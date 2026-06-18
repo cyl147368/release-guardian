@@ -22,7 +22,7 @@ const RELEASE_STATUS = [
   "rolled_back"
 ];
 const APPROVAL_STATUS = ["pending", "approved", "rejected"];
-const SERVICE_VERSION = "3.0.0";
+const SERVICE_VERSION = "3.1.0";
 
 export class ReleaseService {
   constructor(repository, clock = nowIso, webhookManager = null) {
