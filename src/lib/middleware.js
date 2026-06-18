@@ -291,12 +291,11 @@ export function withContentTypeValidation(app, {
  */
 export function withRequestSanitization(app) {
   return async function sanitizedApp(request) {
-    // 清理 URL 中的潜在危险字符
-    const url = new URL(request.url, "http://localhost");
-    const pathname = url.pathname;
+    // 在 URL 解析之前检查原始字符串
+    const rawUrl = request.url;
     
     // 检测路径遍历攻击
-    if (pathname.includes("..") || pathname.includes("%2e%2e")) {
+    if (rawUrl.includes("..") || rawUrl.includes("%2e%2e") || rawUrl.includes("%2E%2E")) {
       return {
         statusCode: 400,
         headers: { "content-type": "application/json; charset=utf-8" },
@@ -334,6 +333,7 @@ export function withRequestSanitization(app) {
       }
     }
     
+    const url = new URL(request.url, "http://localhost");
     return app(request);
   };
 }
