@@ -49,6 +49,9 @@ runStep("语法检查", "npm run lint");
 // 2. 测试
 const testOutput = runStep("单元测试", "npm test");
 
+// 重置数据文件（防止测试污染）
+try { execSync("git checkout data/seed.json", { encoding: "utf8", stdio: "pipe" }); } catch {}
+
 // 3. 覆盖率
 const coverageOutput = runStep("覆盖率检查", "npm run test:coverage");
 
