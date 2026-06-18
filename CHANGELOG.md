@@ -13,6 +13,8 @@ All notable changes to this project are documented in this file.
 - Evidence package conflict checks, escalation flags, and remediation actions
 - Service and API tests for the escalation report contract
 - Evidence package tests for traceability, conflict visibility, and remediation guidance
+- Scheduling now blocks releases with active release-window conflicts
+- Service and API tests for the scheduling conflict gate
 
 ### Changed
 

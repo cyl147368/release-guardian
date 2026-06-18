@@ -163,6 +163,8 @@ Applies an approval or rejection decision.
 
 Schedules an approved release.
 
+If active release-window conflicts exist, the schedule request is rejected with a `409 release_window_conflict` error and the conflict details are included in the response payload.
+
 ### `POST /api/releases/:releaseId/deploy`
 
 Records the deployment outcome.
@@ -351,6 +353,8 @@ curl http://localhost:3000/api/releases/<releaseId>/evidence
 ```bash
 curl http://localhost:3000/api/releases/<releaseId>/conflicts
 ```
+
+Scheduling an approved release now acts as a hard governance gate and refuses to move forward when the release overlaps another active change window.
 
 ### View Operational Escalations
 

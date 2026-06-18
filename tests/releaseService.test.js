@@ -93,6 +93,51 @@ test("scheduleRelease rejects scheduling before approval", async () => {
   );
 });
 
+test("scheduleRelease blocks approved releases with active window conflicts", async () => {
+  const repository = await createFixtureRepository();
+  const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");
+  const basePayload = {
+    application: "docs-site",
+    version: "1.0.0",
+    environment: "development",
+    serviceTier: "tier_3",
+    changeCategory: "standard",
+    plannedStartAt: "2026-06-18T08:00:00.000Z",
+    plannedEndAt: "2026-06-18T09:00:00.000Z",
+    summary: "Publish a minor documentation update.",
+    components: ["site"],
+    owner: "bob",
+    controls: {
+      automatedTestsPassed: true,
+      rollbackReady: true,
+      monitoringReady: true,
+      securityReviewed: true,
+      customerImpactScore: 0,
+      dataSensitivityScore: 0
+    }
+  };
+
+  await service.createRelease(basePayload);
+  const conflicting = await service.createRelease({
+    ...basePayload,
+    version: "1.0.1",
+    plannedStartAt: "2026-06-18T08:30:00.000Z",
+    plannedEndAt: "2026-06-18T09:30:00.000Z"
+  });
+
+  await assert.rejects(
+    service.scheduleRelease(conflicting.id, {
+      actor: "bob",
+      scheduledAt: "2026-06-18T08:30:00.000Z"
+    }),
+    (error) => {
+      assert.equal(error.code, "release_window_conflict");
+      assert.equal(error.details.conflicts.length, 1);
+      return true;
+    }
+  );
+});
+
 test("createRelease auto-approves low-risk releases consistently", async () => {
   const repository = await createFixtureRepository();
   const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");

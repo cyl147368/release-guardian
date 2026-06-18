@@ -262,6 +262,19 @@ export class ReleaseService {
       );
     }
 
+    const conflicts = findReleaseConflicts(db.releases, release, release.id);
+    if (conflicts.length > 0) {
+      release.conflicts = conflicts;
+      release.updatedAt = this.clock();
+      await this.repository.save(db);
+      throw new HttpError(
+        409,
+        "release_window_conflict",
+        "Release cannot be scheduled while active release-window conflicts exist.",
+        { conflicts }
+      );
+    }
+
     release.status = "scheduled";
     release.deployment = {
       scheduledAt: input.scheduledAt,

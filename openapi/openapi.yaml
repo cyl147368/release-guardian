@@ -124,6 +124,7 @@ paths:
   /api/releases/{releaseId}/schedule:
     post:
       summary: Schedule an approved release
+      description: Rejects the schedule request with `409 release_window_conflict` when the release overlaps another active release window.
       parameters:
         - in: path
           name: releaseId

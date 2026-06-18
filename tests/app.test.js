@@ -196,6 +196,34 @@ test("GET /api/releases/:id/conflicts returns release-window conflicts", async (
   assert.equal(body.data.conflicts[0].application, "ops-portal");
 });
 
+test("POST /api/releases/:id/schedule rejects active release-window conflicts", async () => {
+  const app = await createFixtureApp();
+  const firstPayload = createPayload();
+  firstPayload.environment = "development";
+  firstPayload.serviceTier = "tier_3";
+  firstPayload.controls.customerImpactScore = 0;
+  firstPayload.controls.dataSensitivityScore = 0;
+
+  await app(buildRequest("POST", "/api/releases", firstPayload));
+  const secondResponse = await app(buildRequest("POST", "/api/releases", {
+    ...firstPayload,
+    version: "2.1.1",
+    plannedStartAt: "2026-06-21T08:30:00.000Z",
+    plannedEndAt: "2026-06-21T09:30:00.000Z"
+  }));
+  const second = JSON.parse(secondResponse.body).data;
+
+  const response = await app(buildRequest("POST", `/api/releases/${second.id}/schedule`, {
+    actor: "carol",
+    scheduledAt: "2026-06-21T08:30:00.000Z"
+  }));
+  const body = JSON.parse(response.body);
+
+  assert.equal(response.statusCode, 409);
+  assert.equal(body.error.code, "release_window_conflict");
+  assert.equal(body.error.details.conflicts.length, 1);
+});
+
 test("GET /api/escalations returns operational escalation summary", async () => {
   const app = await createFixtureApp();
   const payload = createPayload();
