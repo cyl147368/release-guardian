@@ -141,7 +141,15 @@ Returns a single release.
 
 ### `GET /api/releases/:releaseId/evidence`
 
-Returns an audit evidence package containing control evidence, approval evidence, deployment outcome evidence, and release timeline data.
+Returns an audit evidence package containing control evidence, approval evidence, deployment outcome evidence, release timeline data, conflict checks, escalation flags, and remediation actions.
+
+The evidence package includes stable identifiers:
+
+- `evidencePackageId` for the full package snapshot
+- `evidenceId` for each individual control assertion
+- `summary.openConflicts` for current release-window collision count
+- `summary.escalationFlags` for active governance risks
+- `remediationActions` for audit follow-up and operational closure
 
 ### `GET /api/releases/:releaseId/conflicts`
 
@@ -379,7 +387,7 @@ The project currently includes:
 - API smoke tests
 - Governance filter tests
 - Policy endpoint tests
-- Audit evidence package tests
+- Audit evidence package and traceability tests
 - Release-window conflict tests
 - Operational escalation tests
 - Executive escalation report tests

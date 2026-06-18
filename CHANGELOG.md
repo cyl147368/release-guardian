@@ -9,11 +9,15 @@ All notable changes to this project are documented in this file.
 - Executive escalation report endpoint at `GET /api/escalations/report`
 - Stable escalation report identifiers for audit traceability
 - Severity distribution, executive narrative, recommended remediation actions, and machine-readable report rows
+- Stable evidence package and control evidence identifiers
+- Evidence package conflict checks, escalation flags, and remediation actions
 - Service and API tests for the escalation report contract
+- Evidence package tests for traceability, conflict visibility, and remediation guidance
 
 ### Changed
 
-- OpenAPI, README, and package metadata now describe the expanded reporting surface
+- OpenAPI, README, and package metadata now describe the expanded reporting and evidence surface
+- Release-window conflict payloads now include the conflicting release version
 
 ## 1.2.0 - 2026-06-18
 

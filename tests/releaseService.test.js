@@ -352,10 +352,46 @@ test("getEvidencePackage assembles audit-ready release evidence", async () => {
 
   const evidence = await service.getEvidencePackage(release.id);
 
+  assert.match(evidence.evidencePackageId, /^pkg-[a-f0-9]{16}$/);
   assert.equal(evidence.summary.auditReady, true);
+  assert.equal(evidence.summary.openConflicts, 0);
+  assert.equal(evidence.summary.escalationFlags, 0);
+  assert.equal(evidence.remediationActions.length, 0);
+  assert.ok(evidence.evidence.every((item) => /^ev-[a-f0-9]{12}$/.test(item.evidenceId)));
   assert.ok(evidence.evidence.some((item) => item.control === "control:automated-tests"));
   assert.ok(evidence.evidence.some((item) => item.control === "approval:release_management"));
   assert.equal(evidence.evidence.at(-1).control, "deployment:outcome-recorded");
+});
+
+test("getEvidencePackage surfaces conflicts, escalation flags, and remediation actions", async () => {
+  const repository = await createFixtureRepository();
+  let currentTime = "2026-06-18T00:00:00.000Z";
+  const service = new ReleaseService(repository, () => currentTime);
+
+  const first = await service.createRelease(buildPayload());
+  await service.createRelease({
+    ...buildPayload(),
+    version: "2026.06.18-conflict",
+    plannedStartAt: "2026-06-20T08:30:00.000Z",
+    plannedEndAt: "2026-06-20T10:00:00.000Z"
+  });
+
+  currentTime = "2026-06-18T10:30:00.000Z";
+  const evidence = await service.getEvidencePackage(first.id);
+
+  assert.equal(evidence.summary.auditReady, false);
+  assert.equal(evidence.summary.openConflicts, 1);
+  assert.equal(evidence.summary.escalationFlags, 3);
+  assert.ok(evidence.conflicts.some((conflict) => conflict.version === "2026.06.18-conflict"));
+  assert.ok(evidence.escalationFlags.some((flag) => flag.code === "approval_sla_breached"));
+  assert.ok(evidence.escalationFlags.some((flag) => flag.code === "high_risk_pending_approval"));
+  assert.ok(evidence.escalationFlags.some((flag) => flag.code === "release_window_conflict"));
+  assert.ok(evidence.remediationActions.some((action) => action.priority === "P0"));
+  assert.ok(
+    evidence.remediationActions.some((action) =>
+      action.action.includes("Resolve release-window conflicts")
+    )
+  );
 });
 
 test("deployRelease records deployment outcome and dashboard metrics", async () => {

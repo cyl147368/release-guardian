@@ -87,6 +87,7 @@ paths:
   /api/releases/{releaseId}/evidence:
     get:
       summary: Retrieve audit evidence package for a release
+      description: Returns control evidence, approval evidence, deployment outcome evidence, stable evidence identifiers, conflict checks, escalation flags, and remediation actions.
       parameters:
         - in: path
           name: releaseId

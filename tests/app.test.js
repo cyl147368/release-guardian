@@ -158,7 +158,11 @@ test("GET /api/releases/:id/evidence returns audit package", async () => {
   const body = JSON.parse(response.body);
 
   assert.equal(response.statusCode, 200);
+  assert.match(body.data.evidencePackageId, /^pkg-[a-f0-9]{16}$/);
   assert.equal(body.data.summary.auditReady, true);
+  assert.equal(body.data.summary.openConflicts, 0);
+  assert.equal(body.data.summary.escalationFlags, 0);
+  assert.ok(body.data.evidence.every((item) => /^ev-[a-f0-9]{12}$/.test(item.evidenceId)));
   assert.ok(body.data.evidence.some((item) => item.control === "deployment:outcome-recorded"));
 });
 

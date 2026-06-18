@@ -338,7 +338,14 @@ export class ReleaseService {
   }
 
   async getEvidencePackage(releaseId) {
-    const release = await this.getRelease(releaseId);
+    const db = await this.repository.load();
+    const currentTime = this.clock();
+    const release = db.releases.find((item) => item.id === releaseId);
+    if (!release) {
+      throw new HttpError(404, "not_found", `Release ${releaseId} was not found.`);
+    }
+    refreshApprovalSla(release, currentTime);
+
     const controls = buildControlEvidence(release);
     const approvalEvidence = release.approvals.map((approval) => ({
       control: `approval:${approval.team}`,
@@ -360,11 +367,19 @@ export class ReleaseService {
       deployment: release.deployment
     };
 
-    const evidence = [...controls, ...approvalEvidence, deploymentEvidence];
+    const conflicts = findReleaseConflicts(db.releases, release, release.id);
+    const escalationFlags = buildReleaseEscalationFlags(release, conflicts, currentTime);
+    const evidence = [...controls, ...approvalEvidence, deploymentEvidence].map((item) => ({
+      ...item,
+      evidenceId: createStableEvidenceId(release.id, item.control)
+    }));
     const passed = evidence.filter((item) => item.passed).length;
+    const auditReady =
+      evidence.every((item) => item.passed) && conflicts.length === 0 && escalationFlags.length === 0;
 
-    return {
-      generatedAt: this.clock(),
+    const evidencePackage = {
+      evidencePackageId: "",
+      generatedAt: currentTime,
       releaseId: release.id,
       application: release.application,
       version: release.version,
@@ -375,11 +390,19 @@ export class ReleaseService {
         totalControls: evidence.length,
         passedControls: passed,
         failedControls: evidence.length - passed,
-        auditReady: evidence.every((item) => item.passed)
+        openConflicts: conflicts.length,
+        escalationFlags: escalationFlags.length,
+        auditReady
       },
       evidence,
+      conflicts,
+      escalationFlags,
+      remediationActions: buildEvidenceRemediationActions(evidence, conflicts, escalationFlags),
       timeline: release.timeline
     };
+
+    evidencePackage.evidencePackageId = createStableEvidencePackageId(evidencePackage);
+    return evidencePackage;
   }
 
   async getDashboard() {
@@ -493,6 +516,7 @@ function findReleaseConflicts(releases, candidate, candidateId = null) {
     .map((release) => ({
       releaseId: release.id,
       application: release.application,
+      version: release.version,
       environment: release.environment,
       status: release.status,
       plannedStartAt: release.plannedStartAt,
@@ -682,6 +706,124 @@ function createStableReportId(report) {
     .digest("hex")
     .slice(0, 16);
   return `esc-${digest}`;
+}
+
+function buildReleaseEscalationFlags(release, conflicts, currentTime) {
+  const flags = [];
+  const pendingApprovals = release.approvals.filter((approval) => approval.status === "pending");
+  const overdueApprovals = pendingApprovals.filter((approval) => approval.slaBreached);
+
+  if (overdueApprovals.length > 0) {
+    flags.push({
+      code: "approval_sla_breached",
+      severity: release.risk.band === "critical" ? "critical" : "high",
+      detail: `${overdueApprovals.length} approval SLA breach(es) detected.`,
+      teams: overdueApprovals.map((approval) => approval.team),
+      detectedAt: currentTime
+    });
+  }
+
+  if (["high", "critical"].includes(release.risk.band) && pendingApprovals.length > 0) {
+    flags.push({
+      code: "high_risk_pending_approval",
+      severity: release.risk.band === "critical" ? "critical" : "high",
+      detail: `${release.risk.band} release is still pending required approval.`,
+      teams: pendingApprovals.map((approval) => approval.team),
+      detectedAt: currentTime
+    });
+  }
+
+  if (conflicts.length > 0) {
+    flags.push({
+      code: "release_window_conflict",
+      severity: release.status === "pending_approval" ? "high" : "medium",
+      detail: `${conflicts.length} overlapping release window(s) detected.`,
+      teams: ["release_management"],
+      detectedAt: currentTime
+    });
+  }
+
+  return flags;
+}
+
+function buildEvidenceRemediationActions(evidence, conflicts, escalationFlags) {
+  const actions = [];
+  const failedControls = evidence.filter((item) => !item.passed);
+
+  for (const control of failedControls) {
+    actions.push({
+      priority: control.control.startsWith("approval:") ? "P1" : "P2",
+      owner: control.control.startsWith("approval:") ? control.control.replace("approval:", "") : "owner",
+      action: `Resolve failed evidence control ${control.control}.`
+    });
+  }
+
+  if (conflicts.length > 0) {
+    actions.push({
+      priority: "P1",
+      owner: "release_management",
+      action: "Resolve release-window conflicts before deployment approval."
+    });
+  }
+
+  for (const flag of escalationFlags) {
+    if (flag.code === "approval_sla_breached") {
+      actions.push({
+        priority: flag.severity === "critical" ? "P0" : "P1",
+        owner: "release_management",
+        action: "Escalate overdue approvals and record follow-up decisions."
+      });
+    }
+    if (flag.code === "high_risk_pending_approval") {
+      actions.push({
+        priority: flag.severity === "critical" ? "P0" : "P1",
+        owner: "service_owner",
+        action: "Keep deployment blocked until high-risk approval is complete."
+      });
+    }
+  }
+
+  return dedupeActions(actions);
+}
+
+function dedupeActions(actions) {
+  const seen = new Set();
+  return actions.filter((action) => {
+    const key = `${action.priority}:${action.owner}:${action.action}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+function createStableEvidenceId(releaseId, control) {
+  const digest = createHash("sha256")
+    .update(`${releaseId}:${control}`)
+    .digest("hex")
+    .slice(0, 12);
+  return `ev-${digest}`;
+}
+
+function createStableEvidencePackageId(evidencePackage) {
+  const digest = createHash("sha256")
+    .update(
+      JSON.stringify({
+        generatedAt: evidencePackage.generatedAt,
+        releaseId: evidencePackage.releaseId,
+        evidence: evidencePackage.evidence.map((item) => ({
+          evidenceId: item.evidenceId,
+          status: item.status,
+          passed: item.passed
+        })),
+        conflicts: evidencePackage.conflicts,
+        escalationFlags: evidencePackage.escalationFlags
+      })
+    )
+    .digest("hex")
+    .slice(0, 16);
+  return `pkg-${digest}`;
 }
 
 function validateReleaseInput(input) {
