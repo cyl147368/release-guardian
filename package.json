@@ -14,7 +14,7 @@
     "test:coverage": "node --test --test-concurrency=1 --experimental-test-coverage tests/*.test.js",
     "test:bootstrap": "node --test tests/bootstrap.test.js",
     "quality": "node scripts/quality-check.js",
-    "lint": "node --check src/server.js && node --check src/bootstrap.js && node --check src/app.js && node --check src/repository.js && node --check src/services/releaseService.js && node --check src/lib/http.js && node --check src/lib/validation.js && node --check src/lib/time.js && node --check src/lib/logger.js && node --check src/lib/middleware.js && node --check src/lib/webhooks.js && node --check src/lib/sanitization.js && node --check scripts/seed-demo.js && node --check tests/openapi.test.js"
+    "lint": "node --check src/server.js && node --check src/bootstrap.js && node --check src/app.js && node --check src/repository.js && node --check src/services/releaseService.js && node --check src/lib/http.js && node --check src/lib/validation.js && node --check src/lib/time.js && node --check src/lib/logger.js && node --check src/lib/middleware.js && node --check src/lib/webhooks.js && node --check src/lib/sanitization.js && node --check src/lib/audit.js && node --check src/lib/metrics.js && node --check src/lib/websocket.js && node --check scripts/seed-demo.js && node --check tests/openapi.test.js"
   },
   "keywords": [
     "release",
