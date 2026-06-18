@@ -1,8 +1,10 @@
 import { createServer } from "node:http";
 
 import { createApp } from "./app.js";
+import { createAuditLog } from "./lib/audit.js";
 import { sendResponse } from "./lib/http.js";
 import { createLogger } from "./lib/logger.js";
+import { createMetrics } from "./lib/metrics.js";
 import {
   withApiKeyAuth,
   withBodySizeLimit,
@@ -10,7 +12,7 @@ import {
   withCors,
   withRateLimit,
   withRequestLogging,
-  withSecurityHeaders
+  withSecurityHeaders,
 } from "./lib/middleware.js";
 import { Repository } from "./repository.js";
 import { ReleaseService } from "./services/releaseService.js";
@@ -30,23 +32,22 @@ export function createRuntime({
   apiKeys = process.env.API_KEYS ? process.env.API_KEYS.split(",").map((k) => k.trim()).filter(Boolean) : [],
   corsOrigin = process.env.CORS_ORIGIN || "*",
   enableSecurityHeaders = process.env.SECURITY_HEADERS !== "false",
-  maxBodyBytes = Number(process.env.MAX_BODY_BYTES || 1048576)
+  maxBodyBytes = Number(process.env.MAX_BODY_BYTES || 1048576),
 } = {}) {
-  let app = createApp(service);
+  // 创建审计日志和指标收集器
+  const auditLog = createAuditLog();
+  const metrics = createMetrics();
 
-  // 中间件管道：安全头 → CORS → 内容类型验证 → 请求体限制 → 认证 → 速率限制 → 请求日志 → 应用
-  if (enableSecurityHeaders) {
-    app = withSecurityHeaders(app);
-  }
+  let app = createApp(service, { auditLog, metrics });
+
+  // 中间件管道：指标记录 → 安全头 → CORS → 内容类型验证 → 请求体限制 → 认证 → 速率限制 → 请求日志 → 应用
+  app = withMetrics(app, metrics);
+  if (enableSecurityHeaders) app = withSecurityHeaders(app);
   app = withCors(app, { allowOrigin: corsOrigin });
   app = withContentTypeValidation(app);
   app = withBodySizeLimit(app, { maxBytes: maxBodyBytes });
-  if (apiKeys.length > 0) {
-    app = withApiKeyAuth(app, { apiKeys });
-  }
-  if (enableRateLimit) {
-    app = withRateLimit(app, { maxRequests: rateLimitMax, windowMs: rateLimitWindowMs });
-  }
+  if (apiKeys.length > 0) app = withApiKeyAuth(app, { apiKeys });
+  if (enableRateLimit) app = withRateLimit(app, { maxRequests: rateLimitMax, windowMs: rateLimitWindowMs });
   app = withRequestLogging(app, structuredLogger);
 
   const server = createServerImpl(async (request, response) => {
@@ -54,7 +55,7 @@ export function createRuntime({
     sendResponse(response, payload);
   });
 
-  // 优雅关闭处理
+  // 优雅关闭
   let shuttingDown = false;
 
   function gracefulShutdown(signal) {
@@ -67,7 +68,6 @@ export function createRuntime({
       process.exit(0);
     });
 
-    // 10 秒后强制退出
     setTimeout(() => {
       structuredLogger.error("shutdown_forced", { signal });
       process.exit(1);
@@ -97,9 +97,19 @@ export function createRuntime({
     });
   }
 
-  return {
-    app,
-    server,
-    listen
+  return { app, server, listen, auditLog, metrics };
+}
+
+/**
+ * 指标收集中间件
+ */
+function withMetrics(app, metrics) {
+  return async function metricsApp(request) {
+    const start = performance.now();
+    const url = new URL(request.url, "http://localhost");
+    const payload = await app(request);
+    const durationMs = Math.round((performance.now() - start) * 100) / 100;
+    metrics.recordRequest(request.method, url.pathname, payload.statusCode, durationMs);
+    return payload;
   };
 }

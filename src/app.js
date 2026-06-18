@@ -12,7 +12,9 @@ const MIME_TYPES = {
   ".png": "image/png",
   ".jpg": "image/jpeg",
   ".svg": "image/svg+xml",
-  ".ico": "image/x-icon"
+  ".ico": "image/x-icon",
+  ".woff2": "font/woff2",
+  ".woff": "font/woff",
 };
 
 const PUBLIC_DIR = join(import.meta.dirname, "..", "public");
@@ -25,17 +27,23 @@ function serveStatic(pathname) {
     const ext = extname(filePath);
     return {
       statusCode: 200,
-      headers: { "content-type": MIME_TYPES[ext] || "application/octet-stream", "cache-control": "public, max-age=3600" },
-      body: data
+      headers: {
+        "content-type": MIME_TYPES[ext] || "application/octet-stream",
+        "cache-control": ext === ".html" ? "no-cache" : "public, max-age=3600",
+      },
+      body: data,
     };
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
-export function createApp(service) {
+export function createApp(service, { auditLog = null, metrics = null } = {}) {
   return async function app(request) {
     const url = new URL(request.url, "http://localhost");
 
     try {
+      // ── 健康检查 ──
       if (request.method === "GET" && url.pathname === "/health") {
         return textResponse(200, "ok");
       }
@@ -46,31 +54,53 @@ export function createApp(service) {
         return jsonResponse(statusCode, { data: readiness }, { etag: etagFor(readiness) });
       }
 
+      // ── 指标端点 ──
+      if (metrics) {
+        if (request.method === "GET" && url.pathname === "/api/metrics") {
+          return jsonResponse(200, { data: metrics.getSnapshot() }, { etag: etagFor(metrics.getSnapshot()) });
+        }
+        if (request.method === "GET" && url.pathname === "/metrics") {
+          return {
+            statusCode: 200,
+            headers: { "content-type": "text/plain; charset=utf-8" },
+            body: metrics.toPrometheus(),
+          };
+        }
+      }
+
+      // ── 审计日志端点 ──
+      if (auditLog) {
+        if (request.method === "GET" && url.pathname === "/api/audit") {
+          const result = auditLog.query(Object.fromEntries(url.searchParams));
+          return jsonResponse(200, { data: result.items, pagination: { total: result.total, limit: result.limit, offset: result.offset } }, { etag: etagFor(result) });
+        }
+        if (request.method === "GET" && url.pathname === "/api/audit/stats") {
+          return jsonResponse(200, { data: auditLog.getStats() }, { etag: etagFor(auditLog.getStats()) });
+        }
+      }
+
+      // ── 发布 CRUD ──
       if (request.method === "GET" && url.pathname === "/api/releases") {
         const result = await service.listReleases(Object.fromEntries(url.searchParams));
         return jsonResponse(200, {
           data: result.items,
-          pagination: {
-            total: result.total,
-            limit: result.limit,
-            offset: result.offset,
-            hasMore: result.hasMore
-          }
+          pagination: { total: result.total, limit: result.limit, offset: result.offset, hasMore: result.hasMore },
         }, { etag: etagFor(result) });
       }
 
       if (request.method === "POST" && url.pathname === "/api/releases") {
         const body = await readJsonBody(request);
         const release = await service.createRelease(body);
+        if (auditLog) auditLog.record("release.created", { actor: body.owner || "system", resourceType: "release", resourceId: release.id, details: { application: release.application, version: release.version, environment: release.environment } });
         return jsonResponse(201, { data: release });
       }
 
       if (request.method === "POST" && url.pathname === "/api/releases/bulk") {
         const body = await readJsonBody(request);
         const result = await service.bulkCreateReleases(body.releases || body);
+        if (auditLog) auditLog.record("releases.bulk_created", { details: { count: result.created?.length ?? result.length ?? 0 } });
         return jsonResponse(201, { data: result });
       }
-
 
       const releaseMatch = url.pathname.match(/^\/api\/releases\/([^/]+)$/);
       if (request.method === "GET" && releaseMatch) {
@@ -94,6 +124,8 @@ export function createApp(service) {
       if (request.method === "POST" && approvalMatch) {
         const body = await readJsonBody(request);
         const release = await service.reviewRelease(approvalMatch[1], body);
+        const event = body.status === "approved" ? "release.approved" : "release.rejected";
+        if (auditLog) auditLog.record(event, { actor: body.approver || "system", resourceType: "release", resourceId: approvalMatch[1], details: { team: body.team, status: body.status } });
         return jsonResponse(200, { data: release });
       }
 
@@ -108,9 +140,11 @@ export function createApp(service) {
       if (request.method === "POST" && deployMatch) {
         const body = await readJsonBody(request);
         const release = await service.deployRelease(deployMatch[1], body);
+        if (auditLog) auditLog.record("release.deployed", { actor: body.deployedBy || "system", resourceType: "release", resourceId: deployMatch[1], details: { environment: release.environment } });
         return jsonResponse(200, { data: release });
       }
 
+      // ── 仪表板 / 升级 / 策略 ──
       if (request.method === "GET" && url.pathname === "/api/dashboard") {
         const dashboard = await service.getDashboard();
         return jsonResponse(200, { data: dashboard }, { etag: etagFor(dashboard) });
@@ -131,7 +165,7 @@ export function createApp(service) {
         return jsonResponse(200, { data: policy }, { etag: etagFor(policy) });
       }
 
-
+      // ── Webhook 管理 ──
       if (request.method === "GET" && url.pathname === "/api/webhooks") {
         const subs = service.listWebhookSubscriptions();
         return jsonResponse(200, { data: subs }, { etag: etagFor(subs) });
@@ -140,12 +174,14 @@ export function createApp(service) {
       if (request.method === "POST" && url.pathname === "/api/webhooks") {
         const body = await readJsonBody(request);
         const sub = service.subscribeWebhook(body);
+        if (auditLog) auditLog.record("webhook.subscribed", { resourceType: "webhook", resourceId: sub.id, details: { url: sub.url } });
         return jsonResponse(201, { data: sub });
       }
 
       const webhookMatch = url.pathname.match(/^\/api\/webhooks\/([^/]+)$/);
       if (request.method === "DELETE" && webhookMatch) {
         service.unsubscribeWebhook(webhookMatch[1]);
+        if (auditLog) auditLog.record("webhook.removed", { resourceType: "webhook", resourceId: webhookMatch[1] });
         return jsonResponse(204, null);
       }
 
@@ -154,32 +190,22 @@ export function createApp(service) {
         return jsonResponse(200, { data: events }, { etag: etagFor(events) });
       }
 
-      // 静态文件服务
+      // ── 静态文件 ──
       const staticResponse = serveStatic(url.pathname);
       if (staticResponse) return staticResponse;
 
+      // ── 404 ──
       return jsonResponse(404, {
-        error: {
-          code: "not_found",
-          message: "Route was not found."
-        }
+        error: { code: "not_found", message: "Route was not found." },
       });
     } catch (error) {
       if (error instanceof HttpError) {
         return jsonResponse(error.statusCode, {
-          error: {
-            code: error.code,
-            message: error.message,
-            details: error.details
-          }
+          error: { code: error.code, message: error.message, details: error.details },
         });
       }
-
       return jsonResponse(500, {
-        error: {
-          code: "internal_error",
-          message: "Unexpected server error."
-        }
+        error: { code: "internal_error", message: "Unexpected server error." },
       });
     }
   };
