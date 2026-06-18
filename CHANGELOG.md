@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented in this file.
 
+## 1.8.0 - 2026-06-18
+
+### Added
+
+- CORS middleware with configurable origins, methods, and preflight handling
+- Security headers middleware: HSTS, CSP, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy
+- Graceful shutdown on SIGTERM/SIGINT with 10-second force-exit timeout
+- Comprehensive security documentation (`docs/SECURITY.md`)
+- Hardening checklist for production deployments
+- 5 new tests for CORS and security headers (87 total)
+
+### Changed
+
+- Bootstrap now layers security headers, CORS, auth, rate limiting, request logging
+- Environment variable configuration: `CORS_ORIGIN`, `SECURITY_HEADERS`
+
 ## 1.7.0 - 2026-06-18
 
 ### Added

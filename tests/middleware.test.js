@@ -173,3 +173,57 @@ describe("withApiKeyAuth", () => {
     assert.equal(res.statusCode, 200);
   });
 });
+
+describe("withCors", () => {
+  it("handles OPTIONS preflight requests", async () => {
+    const { withCors } = await import("../src/lib/middleware.js");
+    const app = withCors(okApp());
+    const res = await app({ method: "OPTIONS", url: "http://localhost/api/releases", headers: {} });
+
+    assert.equal(res.statusCode, 204);
+    assert.equal(res.headers["access-control-allow-origin"], "*");
+    assert.ok(res.headers["access-control-allow-methods"]);
+    assert.ok(res.headers["access-control-allow-headers"]);
+  });
+
+  it("adds CORS headers to normal responses", async () => {
+    const { withCors } = await import("../src/lib/middleware.js");
+    const app = withCors(okApp());
+    const res = await app(fakeRequest());
+
+    assert.equal(res.headers["access-control-allow-origin"], "*");
+    assert.ok(res.headers["access-control-expose-headers"]);
+  });
+
+  it("respects custom origin", async () => {
+    const { withCors } = await import("../src/lib/middleware.js");
+    const app = withCors(okApp(), { allowOrigin: "https://example.com" });
+    const res = await app(fakeRequest());
+
+    assert.equal(res.headers["access-control-allow-origin"], "https://example.com");
+  });
+});
+
+describe("withSecurityHeaders", () => {
+  it("adds security headers to responses", async () => {
+    const { withSecurityHeaders } = await import("../src/lib/middleware.js");
+    const app = withSecurityHeaders(okApp());
+    const res = await app(fakeRequest());
+
+    assert.equal(res.headers["x-content-type-options"], "nosniff");
+    assert.equal(res.headers["x-frame-options"], "DENY");
+    assert.ok(res.headers["strict-transport-security"]);
+    assert.ok(res.headers["content-security-policy"]);
+    assert.equal(res.headers["referrer-policy"], "no-referrer");
+    assert.ok(res.headers["permissions-policy"]);
+  });
+
+  it("preserves existing response headers", async () => {
+    const { withSecurityHeaders } = await import("../src/lib/middleware.js");
+    const app = withSecurityHeaders(okApp({ statusCode: 200, headers: { "x-custom": "value" }, body: "ok" }));
+    const res = await app(fakeRequest());
+
+    assert.equal(res.headers["x-custom"], "value");
+    assert.equal(res.headers["x-content-type-options"], "nosniff");
+  });
+});

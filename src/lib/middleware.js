@@ -175,3 +175,58 @@ export function withApiKeyAuth(app, {
     return app(request);
   };
 }
+
+
+/**
+ * Adds CORS headers to responses.
+ * Supports configurable allowed origins, methods, and headers.
+ */
+export function withCors(app, {
+  allowOrigin = "*",
+  allowMethods = "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+  allowHeaders = "Content-Type, X-API-Key, X-Request-Id",
+  maxAge = "86400"
+} = {}) {
+  return async function corsApp(request) {
+    // Handle preflight
+    if (request.method === "OPTIONS") {
+      return {
+        statusCode: 204,
+        headers: {
+          "access-control-allow-origin": allowOrigin,
+          "access-control-allow-methods": allowMethods,
+          "access-control-allow-headers": allowHeaders,
+          "access-control-max-age": maxAge
+        },
+        body: ""
+      };
+    }
+
+    const payload = await app(request);
+    payload.headers = {
+      ...payload.headers,
+      "access-control-allow-origin": allowOrigin,
+      "access-control-expose-headers": "X-Request-Id, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, ETag"
+    };
+    return payload;
+  };
+}
+
+/**
+ * Adds standard security headers to all responses.
+ */
+export function withSecurityHeaders(app, { csp = "default-src 'none'" } = {}) {
+  return async function secureApp(request) {
+    const payload = await app(request);
+    payload.headers = {
+      ...payload.headers,
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "DENY",
+      "strict-transport-security": "max-age=31536000; includeSubDomains",
+      "content-security-policy": csp,
+      "referrer-policy": "no-referrer",
+      "permissions-policy": "camera=(), microphone=(), geolocation=()"
+    };
+    return payload;
+  };
+}
