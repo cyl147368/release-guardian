@@ -632,7 +632,7 @@ test("getDashboard returns comprehensive metrics", async () => {
 
   const dashboard = await service.getDashboard();
 
-  assert.ok(dashboard.totalReleases >= 1);
+  assert.equal(dashboard.totalReleases, 1);
   assert.ok(dashboard.byStatus);
   assert.ok(dashboard.byEnvironment);
   assert.ok(dashboard.riskDistribution);

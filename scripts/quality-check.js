@@ -46,13 +46,25 @@ function runStep(name, command) {
 // 1. 语法检查
 runStep("语法检查", "npm run lint");
 
+// 重置数据文件
+function resetSeedData() {
+  try {
+    execSync("git show 78780e9:data/seed.json > data/seed.json", { encoding: "utf8", stdio: "pipe" });
+  } catch {
+    // 如果 git show 失败，手动重置
+    const fs = require("fs");
+    const defaultSeed = { releases: [], teams: [{ id: "release_management", displayName: "Release Management" }, { id: "security", displayName: "Security" }, { id: "sre", displayName: "SRE" }] };
+    fs.writeFileSync("data/seed.json", JSON.stringify(defaultSeed, null, 2) + "
+");
+  }
+}
+
 // 2. 测试
+resetSeedData();
 const testOutput = runStep("单元测试", "npm test");
 
-// 重置数据文件（防止测试污染）
-try { execSync("git checkout data/seed.json", { encoding: "utf8", stdio: "pipe" }); } catch {}
-
 // 3. 覆盖率
+resetSeedData();
 const coverageOutput = runStep("覆盖率检查", "npm run test:coverage");
 
 if (coverageOutput) {

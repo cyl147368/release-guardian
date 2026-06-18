@@ -1,17 +1,17 @@
 {
+  "releases": [],
   "teams": [
     {
-      "code": "release_management",
-      "name": "Release Management"
+      "id": "release_management",
+      "displayName": "Release Management"
     },
     {
-      "code": "sre",
-      "name": "Site Reliability Engineering"
+      "id": "security",
+      "displayName": "Security"
     },
     {
-      "code": "security",
-      "name": "Security"
+      "id": "sre",
+      "displayName": "SRE"
     }
-  ],
-  "releases": []
+  ]
 }
