@@ -1,13 +1,10 @@
 #!/usr/bin/env node
 /**
  * 代码质量检查脚本
- * 
- * 运行完整的质量检查流程：语法检查、测试、覆盖率验证
- * 
- * 用法: node scripts/quality-check.js [--min-coverage 80]
  */
 
 import { execSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
 const { values } = parseArgs({
@@ -43,21 +40,20 @@ function runStep(name, command) {
   }
 }
 
+function resetSeedData() {
+  const defaultSeed = {
+    releases: [],
+    teams: [
+      { id: "release_management", displayName: "Release Management" },
+      { id: "security", displayName: "Security" },
+      { id: "sre", displayName: "SRE" }
+    ]
+  };
+  writeFileSync("data/seed.json", JSON.stringify(defaultSeed, null, 2) + "\n");
+}
+
 // 1. 语法检查
 runStep("语法检查", "npm run lint");
-
-// 重置数据文件
-function resetSeedData() {
-  try {
-    execSync("git show 78780e9:data/seed.json > data/seed.json", { encoding: "utf8", stdio: "pipe" });
-  } catch {
-    // 如果 git show 失败，手动重置
-    const fs = require("fs");
-    const defaultSeed = { releases: [], teams: [{ id: "release_management", displayName: "Release Management" }, { id: "security", displayName: "Security" }, { id: "sre", displayName: "SRE" }] };
-    fs.writeFileSync("data/seed.json", JSON.stringify(defaultSeed, null, 2) + "
-");
-  }
-}
 
 // 2. 测试
 resetSeedData();
@@ -81,8 +77,8 @@ if (coverageOutput) {
   }
 }
 
-// 4. OpenAPI 合约测试
-runStep("OpenAPI 合约测试", "node --test tests/openapi.test.js");
+// 4. OpenAPI 契约测试
+runStep("OpenAPI 契约测试", "node --test tests/openapi.test.js");
 
 console.log("=== 检查结果 ===\n");
 if (passed) {
