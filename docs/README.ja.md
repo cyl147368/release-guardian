@@ -1,272 +1,49 @@
-# Release Guardian（日本語）
-
-Release Guardian は、明確なリリース承認、監査可能なデプロイ記録、リスク認識に基づく運用判断を必要とするエンジニアリング組織向けのエンタープライズグレードリリースガバナンス API です。
-
-## 1. 概要
-
-Release Guardian は、プラットフォームチームが5つの重要な質問に答えるのを支援します：
-
-1. どのような変更がリリースされようとしているか？
-2. 各リリースのリスクはどの程度か？
-3. 本番環境へのデプロイ前に誰の承認が必要か？
-4. デプロイ中に何が起きたか？
-5. リーダーシップはどのガバナンス指標を監視すべきか？
-
-本プロジェクトはNode.jsのビルトイン機能を使用して実装されており、サードパーティのランタイム依存がありません。運用フットプリントが小さく、サプライチェーンの攻撃表面が狭く、コードベースの検査が容易です。
-
-## 2. コア機能
-
-- すべてのリリースリクエストに対するリスクスコアリング
-- 環境、サービスティア、統制状態に基づく承認ルーティング
-- ステートフルなリリースライフサイクル追跡
-- デプロイスケジューリングと実行記録
-- 重要なすべてのアクションの監査タイムライン
-- ガバナンスと変更パフォーマンスのダッシュボード指標
-- 安定した監査識別子を持つエグゼクティブエスカレーションレポート
-- ダウンストリーム統合のためのスキーマリッチなOpenAPIコントラクト
-- コンテナ化されたランタイムとCIワークフロー
-- バルクリリース作成（最大50件）
-- Webhookイベント通知システム
-- 構造化JSONログと相関ID
-- レート制限とAPI Key認証
-- CORSとセキュリティヘッダー
-- 多言語ドキュメント
-
-## 3. 製品スコープ
-
-初期デリバリーは、リリースガバナンスのバックエンドコントロールプレーンに焦点を当てています：
-
-- 内部リリースポータルの基盤
-- エンタープライズワークフローツール背後のAPIサービス
-- 変更管理システムの教育/参考プロジェクト
-- UI、RBAC、SSO、外部承認への将来拡張のための安全なベースライン
-
-## 4. アーキテクチャ
-
-```text
-クライアント / オートメーション
-        |
-        v
-  HTTP APIレイヤー
-        |
-        v
-  ミドルウェアパイプライン（ログ、レート制限、認証、CORS、セキュリティヘッダー）
-        |
-        v
-  リリースサービス
-        |
-        v
-  JSONリポジトリ
-        |
-        v
-  永続データファイル
-```
+<div align="center">
 
-### アーキテクチャノート
+# 🛡️ Release Guardian
 
-- `src/server.js`：HTTPサーバーを起動
-- `src/app.js`：リクエストをルーティングしAPIレスポンスを構築
-- `src/services/releaseService.js`：ビジネスロジックを保持
-- `src/repository.js`：永続化を分離
-- `src/lib/http.js`：HTTPユーティリティ関数
-- `src/lib/logger.js`：構造化JSONロガー
-- `src/lib/middleware.js`：リクエストログ、レート制限、API Key認証、CORS、セキュリティヘッダー
-- `src/lib/webhooks.js`：Webhookサブスクリプションとイベントディスパッチ
-- `src/lib/validation.js`：入力検証
-- `src/lib/time.js`：時間ユーティリティ
-- `tests/*.test.js`：サービスおよびAPIテストカバレッジ
+**エンタープライズ リリースガバナンスプラットフォーム**
 
-## 5. 技術選択
+[![CI](https://github.com/cyl147368/release-guardian/actions/workflows/ci.yml/badge.svg)](https://github.com/cyl147368/release-guardian/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-96.75%25-brightgreen)](https://github.com/cyl147368/release-guardian)
+[![Node](https://img.shields.io/badge/node-%3E%3D20-green)](https://nodejs.org)
+[![License](https://img.shields.io/badge/license-MIT-blue)](../LICENSE)
 
-- 言語：JavaScript（ESモジュール）
-- ランタイム：Node.js 20+（Node.js 24で検証済み）
-- テスト：ネイティブ `node:test`
-- 永続化：JSONファイルリポジトリ
-- API記述：OpenAPI 3.1
-- コンテナランタイム：Docker
-- CI：GitHub Actions
-- デプロイ：Kubernetes（Kustomize + Helm）
+[English](README.en.md) · [日本語](README.ja.md) · [中文](../README.md)
 
-## 6. 機能設計
+</div>
 
-### 6.1 リリースライフサイクル
+---
 
-リリース状態：
+## 概要
 
-- `draft`（下書き）
-- `pending_approval`（承認待ち）
-- `approved`（承認済み）
-- `rejected`（却下）
-- `scheduled`（スケジュール済み）
-- `deployed`（デプロイ済み）
-- `rolled_back`（ロールバック済み）
+Release Guardianは、ゼロ依存のエンタープライズリリースガバナンスプラットフォームです。リリースリクエストの提出から承認ルーティング、スケジューリング、デプロイメント、ロールバック回復まで、ソフトウェアリリースのライフサイクル全体を安全かつ準拠的に管理します。
 
-### 6.2 リスク入力
+**コアバリュー**: すべてのリリースを追跡可能・監査可能・制御可能にする。
 
-リスクは以下から算出されます：
+### Release Guardianを選ぶ理由
 
-- 対象環境
-- サービスクリティカリティティア
-- 変更カテゴリ
-- 影響を受けるコンポーネント数
-- 顧客影響スコア
-- データ感度スコア
-- 自動テスト準備状態
-- ロールバック準備状態
-- モニタリング準備状態
-- セキュリティレビュー完了状態
+| 特徴 | 説明 |
+|------|------|
+| 🏗️ ランタイム依存ゼロ | Node.js組み込みモジュールのみ使用、サードパーティパッケージリスクなし |
+| 🛡️ 多段階承認ルーティング | リスクスコアとサービア層に基づき承認チームを自動割り当て |
+| 📊 リアルタイムダッシュボード | Webコンソールでリリースステータス、リスク分布、SLA違反をリアルタイム表示 |
+| 🔔 Webhookイベント | リリース状態変更時に外部システムへ自動プッシュ |
+| 📝 監査ログ | 全操作の完全記録、多次元クエリ対応 |
+| 📈 Prometheusメトリクス | 組み込みメトリクス収集、ワンクリックGrafana統合 |
+| 🐳 コンテナ対応 | Docker + Kubernetes + Helm ワンクリックデプロイ |
+| ✅ 96.75%カバレッジ | 218テストケース、エンタープライズ品質保証 |
 
-### 6.3 承認ルーティング
+---
 
-- ベースライン承認：リリース管理チーム
-- 追加承認：SRE（高リスクリリース）
-- 追加承認：セキュリティ（重要またはティア1リリース）
+## クイックスタート
 
-## 7. APIエンドポイント
+### 前提条件
 
-### `GET /health`
+- Node.js >= 20
+- npm >= 9
 
-ヘルスプローブ。プレーンテキスト `ok` を返却。
-
-### `GET /ready`
-
-レディネスプローブ。データストアの健全性をチェック。
-
-```bash
-curl -s http://localhost:3000/ready | jq .
-```
-
-レスポンスフィールド：
-
-- `status`：`ready` または `not_ready`
-- `version`：実行中のサービスバージョン
-- `checks.datastore.status`：`ok` または `error`
-- `checks.datastore.releaseCount`：データストア内のリリース総数
-- `checks.datastore.teamCount`：データストア内のチーム総数
-
-### `GET /api/releases`
-
-リリース一覧の照会。複数のフィルタとページネーションをサポート。
-
-サポートされるクエリパラメータ：
-
-- `environment`、`status`、`riskBand`、`application`、`owner`
-- `pendingApprovals`、`sort`、`order`、`limit`、`offset`
-
-### `POST /api/releases`
-
-リリース申請を作成。
-
-### `POST /api/releases/bulk`
-
-バルクリリース作成（最大50件）。部分失敗をサポート。
-
-### `GET /api/releases/:releaseId`
-
-単一リリースの取得。
-
-### `GET /api/releases/:releaseId/evidence`
-
-監査エビデンスパッケージの取得。
-
-### `GET /api/releases/:releaseId/conflicts`
-
-リリースウィンドウ衝突の照会。
-
-### `POST /api/releases/:releaseId/approvals`
-
-リリースの承認または却下。
-
-### `POST /api/releases/:releaseId/schedule`
-
-承認済みリリースのスケジュール。ウィンドウ衝突がある場合 `409 release_window_conflict` を返却。
-
-### `POST /api/releases/:releaseId/deploy`
-
-デプロイ結果の記録。
-
-### `GET /api/dashboard`
-
-ガバナンスダッシュボード指標。
-
-### `GET /api/escalations`
-
-オペレーショナルエスカレーション概要。
-
-### `GET /api/escalations/report`
-
-エグゼクティブエスカレーションレポート。
-
-### `GET /api/policy`
-
-ガバナンスポリシー設定。
-
-## 7.1 Webhook API
-
-### `GET /api/webhooks`
-
-すべてのWebhookサブスクリプションを一覧表示。
-
-### `POST /api/webhooks`
-
-Webhookサブスクリプションを作成。
-
-### `DELETE /api/webhooks/:webhookId`
-
-Webhookサブスクリプションを削除。
-
-### `GET /api/webhooks/events`
-
-Webhookイベント配信ログを返却（ページネーション対応）。
-
-## 7.2 デプロイ
-
-### Docker
-
-```bash
-docker build -t release-guardian:latest .
-docker run -p 3000:3000 release-guardian:latest
-```
-
-### Kubernetes（Kustomize）
-
-```bash
-kubectl apply -k k8s/overlays/staging
-kubectl apply -k k8s/overlays/production
-```
-
-### Kubernetes（Helm）
-
-```bash
-helm install release-guardian helm/release-guardian \
-  --set image.tag=2.0.0 \
-  --set config.logLevel=info
-```
-
-## 8. エラーモデル
-
-すべてのエラーは統一形式に従います：
-
-```json
-{
-  "error": {
-    "code": "not_found",
-    "message": "Release xyz was not found.",
-    "details": {}
-  }
-}
-```
-
-| ステータスコード | エラーコード | 意味 |
-|-----------------|-------------|------|
-| 400 | `validation_error` | リクエストパラメータが無効 |
-| 401 | `unauthorized` | API Keyが不足または無効 |
-| 404 | `not_found` | リソースが存在しない |
-| 409 | `release_window_conflict` | リリースウィンドウ衝突 |
-| 429 | `rate_limit_exceeded` | レート制限を超過 |
-| 500 | `internal_error` | サーバー内部エラー |
-
-## 9. クイックスタート
+### インストールと起動
 
 ```bash
 git clone https://github.com/cyl147368/release-guardian.git
@@ -275,49 +52,185 @@ npm install
 npm start
 ```
 
-デフォルトで `http://127.0.0.1:3000` で起動。
+起動後：
+- **Webコンソール**: http://localhost:3000
+- **APIドキュメント**: http://localhost:3000/api/policy
+- **ヘルスチェック**: http://localhost:3000/health
+- **Prometheusメトリクス**: http://localhost:3000/metrics
 
-### 環境変数
+### Docker
+
+```bash
+docker build -t release-guardian .
+docker run -d --name release-guardian -p 3000:3000 -v rg-data:/app/data release-guardian
+```
+
+### Kubernetes
+
+```bash
+kubectl apply -k k8s/overlays/production
+# または
+helm install release-guardian helm/release-guardian
+```
+
+---
+
+## アーキテクチャ
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                   Webコンソール (SPA)                     │
+│  ダッシュボード│リリース一覧│作成│エスカレーション│Webhook  │
+└──────────────────────────┬──────────────────────────────┘
+                           │ HTTP
+┌──────────────────────────┴──────────────────────────────┐
+│                   ミドルウェアパイプライン                   │
+│  メトリクス→セキュリティ→CORS→バリデーション→認証→ログ     │
+├─────────────────────────────────────────────────────────┤
+│                   ルーター (app.js)                       │
+│  /health  /ready  /api/*  /metrics  /api/audit          │
+├─────────────────────────────────────────────────────────┤
+│                ビジネスロジック (releaseService.js)        │
+│  リスク評価→承認ルーティング→SLA監視                       │
+├─────────────────────────────────────────────────────────┤
+│              永続化層 (repository.js)                     │
+│  JSONファイルストレージ＋アトミックライト                    │
+├──────────────┬──────────────────┬───────────────────────┤
+│  監査ログ     │   メトリクス      │   Webhookエンジン      │
+│  audit.js    │   metrics.js     │   webhooks.js         │
+└──────────────┴──────────────────┴───────────────────────┘
+```
+
+---
+
+## APIエンドポイント
+
+### コア
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| `GET` | `/health` | ヘルスチェック |
+| `GET` | `/ready` | レディネスチェック（詳細付き） |
+| `GET` | `/metrics` | Prometheus形式メトリクス |
+| `GET` | `/api/metrics` | JSON形式メトリクス |
+
+### リリース管理
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| `GET` | `/api/releases` | リリース一覧（フィルタ・ページネーション対応） |
+| `POST` | `/api/releases` | リリースリクエスト作成 |
+| `POST` | `/api/releases/bulk` | 一括リリース作成 |
+| `GET` | `/api/releases/:id` | リリース詳細 |
+| `GET` | `/api/releases/:id/evidence` | エビデンスパッケージ |
+| `GET` | `/api/releases/:id/conflicts` | ウィンドウ競合検出 |
+| `POST` | `/api/releases/:id/approvals` | 承認/却下 |
+| `POST` | `/api/releases/:id/schedule` | スケジューリング |
+| `POST` | `/api/releases/:id/deploy` | デプロイ |
+
+### 運用
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| `GET` | `/api/dashboard` | ダッシュボード集計データ |
+| `GET` | `/api/escalations` | エスカレーションアラート |
+| `GET` | `/api/escalations/report` | エスカレーションレポート |
+| `GET` | `/api/policy` | ガバナンスポリシー設定 |
+| `GET` | `/api/audit` | 監査ログクエリ |
+| `GET` | `/api/audit/stats` | 監査統計 |
+
+### Webhook
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| `GET` | `/api/webhooks` | Webhookサブスクリプション一覧 |
+| `POST` | `/api/webhooks` | サブスクリプション作成 |
+| `DELETE` | `/api/webhooks/:id` | サブスクリプション削除 |
+| `GET` | `/api/webhooks/events` | イベントログ |
+
+---
+
+## ガバナンスモデル
+
+### リスク評価
+
+リリースリクエスト作成時に、以下の次元に基づきリスクスコア（0-100）を自動計算：
+
+- **サービア層**: Tier 1（重要）/ Tier 2（標準）/ Tier 3（一般）
+- **変更カテゴリ**: 緊急 > 通常 > 標準
+- **コントロール項目**: 自動テスト、ロールバック準備、モニタリング、セキュリティレビュー
+- **影響スコア**: 顧客影響 + データ機密性
+
+### 承認ルーティング
+
+リスクスコア >= 70のリリースは手動承認が必要：
+
+| チーム | 条件 | SLA |
+|--------|------|-----|
+| Release Management | 全リリース | 4-8時間 |
+| Security | セキュリティ未レビューまたはデータ機密性 >= 3 | 8時間 |
+| SRE | Tier 1サービスまたは本番環境 | 4時間 |
+
+### ステートマシン
+
+```
+draft → pending_approval → approved → scheduled → deployed
+                  ↓                       ↑
+              rejected              rolled_back
+```
+
+---
+
+## 設定
 
 | 変数 | デフォルト | 説明 |
 |------|-----------|------|
-| `PORT` | `3000` | サービスポート |
+| `PORT` | `3000` | リッスンポート |
 | `HOST` | `127.0.0.1` | リッスンアドレス |
-| `LOG_LEVEL` | `info` | ログレベル |
-| `RATE_LIMIT_ENABLED` | `false` | レート制限を有効化 |
-| `RATE_LIMIT_MAX` | `100` | ウィンドウ内の最大リクエスト数 |
-| `API_KEYS` | _(空)_ | カンマ区切りのAPI Key |
+| `NODE_ENV` | `development` | 実行環境 |
+| `RATE_LIMIT_ENABLED` | `false` | レート制限有効化 |
+| `RATE_LIMIT_MAX` | `100` | ウィンドウ内最大リクエスト数 |
+| `API_KEYS` | _(空)_ | APIキー（カンマ区切り） |
 | `CORS_ORIGIN` | `*` | CORS許可オリジン |
-| `MAX_BODY_BYTES` | `1048576` | Maximum request body size |
-| `SECURITY_HEADERS` | `true` | セキュリティヘッダーを有効化 |
+| `MAX_BODY_BYTES` | `1048576` | 最大リクエストボディサイズ |
 
-## 10. 検証コマンド
+---
+
+## 開発
 
 ```bash
-npm run lint           # 構文チェック
-npm test               # テスト実行（135テスト）
-npm run test:coverage  # カバレッジ付きテスト
-npm run test:bootstrap # ブートストラップテスト
+npm test                # テスト実行
+npm run test:coverage   # カバレッジ付きテスト
+npm run lint            # リントチェック
+npm run quality         # 総合品質ゲート
+npm run seed            # デモデータ生成
+npm run benchmark       # パフォーマンスベンチマーク
 ```
 
-## 11. テスト戦略
+---
 
-- すべてのビジネスロジックをカバーするユニットテスト
-- すべてのHTTPルートとステータスコードをカバーするAPIテスト
-- OpenAPIコントラクトテストによるスキーマ検証
-- ログ、レート制限、認証、CORSをカバーするミドルウェアテスト
-- Webhookサブスクリプション、ディスパッチ、配信追跡テスト
-- バルク操作の部分失敗シナリオテスト
-- カバレッジ閾値：80%
+## ドキュメント
 
-## 12. 本番導入前の推奨事項
+| ドキュメント | 説明 |
+|-------------|------|
+| [API変更履歴](API-CHANGELOG.md) | APIバージョン変更記録 |
+| [デプロイメントガイド](DEPLOYMENT.md) | 詳細なデプロイメント手順 |
+| [運用マニュアル](OPERATIONS.md) | 日常運用操作 |
+| [可观測性](OBSERVABILITY.md) | モニタリング、ログ、アラート |
+| [パフォーマンス](PERFORMANCE.md) | ベンチマークと最適化 |
+| [セキュリティ](SECURITY.md) | セキュリティベストプラクティス |
+| [トラブルシューティング](TROUBLESHOOTING.md) | 一般的な問題と解決策 |
+| [ロードマップ](ROADMAP.md) | 将来の計画 |
+| [ADR](adr/) | アーキテクチャ決定記録 |
 
-- JSON永続化をデータベースへ置き換える（`docs/DATABASE-MIGRATION.md`参照）
-- 認証とRBACを追加する
-- ログ、メトリクス、トレーシングを集中管理する
-- バックアップと復旧手順を整備する
-- `docs/OPERATIONS.md`と`docs/SECURITY.md`を参照
+---
 
-## 13. ライセンス
+## コントリビュート
 
-MIT
+コントリビューションを歓迎します！[CONTRIBUTING.md](../CONTRIBUTING.md)をお読みください。
+
+---
+
+## ライセンス
+
+[MIT License](../LICENSE) © 2026 Release Guardian Contributors
