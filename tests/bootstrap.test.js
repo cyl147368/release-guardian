@@ -121,3 +121,101 @@ function createMockResponse() {
     }
   };
 }
+
+test("runtime 返回 wsServer 实例", async () => {
+  const events = createFakeServerEvents();
+  
+  const runtime = createRuntime({
+    createServerImpl(handler) {
+      events.handler = handler;
+      return createFakeServer(events, []);
+    }
+  });
+  
+  assert.ok(runtime.wsServer);
+  assert.ok(runtime.wsServer.broadcast);
+  assert.ok(runtime.wsServer.getConnectionCount);
+  assert.equal(runtime.wsServer.getConnectionCount(), 0);
+});
+
+test("runtime 返回 auditLog 实例", async () => {
+  const events = createFakeServerEvents();
+  
+  const runtime = createRuntime({
+    createServerImpl(handler) {
+      events.handler = handler;
+      return createFakeServer(events, []);
+    }
+  });
+  
+  assert.ok(runtime.auditLog);
+  assert.ok(runtime.auditLog.record);
+  assert.ok(runtime.auditLog.query);
+  assert.ok(runtime.auditLog.getStats);
+});
+
+test("runtime 返回 metrics 实例", async () => {
+  const events = createFakeServerEvents();
+  
+  const runtime = createRuntime({
+    createServerImpl(handler) {
+      events.handler = handler;
+      return createFakeServer(events, []);
+    }
+  });
+  
+  assert.ok(runtime.metrics);
+  assert.ok(runtime.metrics.recordRequest);
+  assert.ok(runtime.metrics.getSnapshot);
+  assert.ok(runtime.metrics.toPrometheus);
+});
+
+test("runtime 使用自定义端口和主机", async () => {
+  const events = createFakeServerEvents();
+  const calls = [];
+  
+  const runtime = createRuntime({
+    port: 8080,
+    host: "0.0.0.0",
+    logger: { log() {} },
+    createServerImpl(handler) {
+      events.handler = handler;
+      return createFakeServer(events, calls);
+    }
+  });
+  
+  await runtime.listen();
+  
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0].slice(0, 2), [8080, "0.0.0.0"]);
+});
+
+test("runtime 支持速率限制配置", async () => {
+  const events = createFakeServerEvents();
+  
+  const runtime = createRuntime({
+    enableRateLimit: true,
+    rateLimitMax: 50,
+    rateLimitWindowMs: 30000,
+    createServerImpl(handler) {
+      events.handler = handler;
+      return createFakeServer(events, []);
+    }
+  });
+  
+  assert.ok(runtime.app);
+});
+
+test("runtime 支持 API key 认证配置", async () => {
+  const events = createFakeServerEvents();
+  
+  const runtime = createRuntime({
+    apiKeys: ["test-key-1", "test-key-2"],
+    createServerImpl(handler) {
+      events.handler = handler;
+      return createFakeServer(events, []);
+    }
+  });
+  
+  assert.ok(runtime.app);
+});

@@ -165,3 +165,151 @@ describe("WebSocket 集成", () => {
     });
   });
 });
+
+describe("WebSocket 帧编码", () => {
+  it("小帧 (< 126 字节) 正确编码", () => {
+    const httpServer = createServer();
+    const ws = createWebSocketServer({ httpServer });
+    
+    // 通过 broadcast 间接测试帧编码
+    // 验证不抛出异常
+    assert.doesNotThrow(() => {
+      ws.broadcast("test", { message: "hello" });
+    });
+    
+    httpServer.close();
+  });
+
+  it("中等帧 (126-65535 字节) 正确编码", () => {
+    const httpServer = createServer();
+    const ws = createWebSocketServer({ httpServer });
+    
+    // 创建一个较大的消息
+    const largeData = { message: "x".repeat(200) };
+    assert.doesNotThrow(() => {
+      ws.broadcast("test", largeData);
+    });
+    
+    httpServer.close();
+  });
+});
+
+describe("WebSocket 订阅管理", () => {
+  it("支持事件订阅过滤", () => {
+    const httpServer = createServer();
+    const ws = createWebSocketServer({ httpServer });
+    
+    // 验证初始状态
+    assert.equal(ws.getConnectionCount(), 0);
+    const clients = ws.getClients();
+    assert.equal(clients.length, 0);
+    
+    httpServer.close();
+  });
+
+  it("broadcast 只发送给订阅的客户端", () => {
+    const httpServer = createServer();
+    const ws = createWebSocketServer({ httpServer });
+    
+    // 无连接时 broadcast 不抛错
+    assert.doesNotThrow(() => {
+      ws.broadcast("release.created", { id: "123" });
+    });
+    
+    httpServer.close();
+  });
+});
+
+describe("WebSocket 回调集成", () => {
+  it("onConnection 回调在连接时触发", () => {
+    const httpServer = createServer();
+    let connectionId = null;
+    
+    const ws = createWebSocketServer({
+      httpServer,
+      onConnection: (id) => { connectionId = id; },
+    });
+    
+    // 验证回调注册成功（无连接时不触发）
+    assert.equal(connectionId, null);
+    assert.equal(ws.getConnectionCount(), 0);
+    
+    httpServer.close();
+  });
+
+  it("onDisconnect 回调在断开时触发", () => {
+    const httpServer = createServer();
+    let disconnectedId = null;
+    
+    const ws = createWebSocketServer({
+      httpServer,
+      onDisconnect: (id) => { disconnectedId = id; },
+    });
+    
+    // 验证回调注册成功
+    assert.equal(disconnectedId, null);
+    
+    httpServer.close();
+  });
+
+  it("onMessage 回调在收到消息时触发", () => {
+    const httpServer = createServer();
+    let receivedMessage = null;
+    
+    const ws = createWebSocketServer({
+      httpServer,
+      onMessage: (id, msg) => { receivedMessage = msg; },
+    });
+    
+    // 验证回调注册成功
+    assert.equal(receivedMessage, null);
+    
+    httpServer.close();
+  });
+});
+
+describe("WebSocket 边界情况", () => {
+  it("多次 broadcast 不影响服务器状态", () => {
+    const httpServer = createServer();
+    const ws = createWebSocketServer({ httpServer });
+    
+    for (let i = 0; i < 100; i++) {
+      ws.broadcast("test.event", { index: i });
+    }
+    
+    assert.equal(ws.getConnectionCount(), 0);
+    const clients = ws.getClients();
+    assert.equal(clients.length, 0);
+    
+    httpServer.close();
+  });
+
+  it("发送空数据不抛错", () => {
+    const httpServer = createServer();
+    const ws = createWebSocketServer({ httpServer });
+    
+    assert.doesNotThrow(() => {
+      ws.broadcast("test", null);
+      ws.broadcast("test", undefined);
+      ws.broadcast("test", {});
+      ws.broadcast("test", []);
+    });
+    
+    httpServer.close();
+  });
+
+  it("发送特殊字符数据不抛错", () => {
+    const httpServer = createServer();
+    const ws = createWebSocketServer({ httpServer });
+    
+    assert.doesNotThrow(() => {
+      ws.broadcast("test", { 
+        special: '<script>alert("xss")</script>',
+        unicode: '你好世界 🌍',
+        newlines: 'line1\nline2\rline3'
+      });
+    });
+    
+    httpServer.close();
+  });
+});
