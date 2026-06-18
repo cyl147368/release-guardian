@@ -539,13 +539,14 @@ npm run lint
 npm test
 npm run test:coverage
 npm run test:bootstrap
+npm run quality     # 一键质量检查
 ```
 
 The automated test suite also checks that the OpenAPI contract continues to declare every public route, core request/response schema, error model, and governance-specific evidence fields.
 
 ## 13. Testing Strategy
 
-The project includes 168 automated tests across 30 test suites:
+The project includes 176 automated tests across 32 test suites:
 
 - Service-layer lifecycle tests (create, list, get, filter, paginate)
 - Approval workflow tests (approve, reject, SLA tracking)
@@ -565,7 +566,7 @@ The project includes 168 automated tests across 30 test suites:
 - Time and validation utility tests
 - OpenAPI contract guardrail tests (all 17 endpoints, schemas, response codes)
 
-Coverage: 94.12% line coverage, 86.50% branch coverage, 95.38% function coverage. Coverage threshold: 80%.
+Coverage: 94.58% line coverage, 87.67% branch coverage, 96.13% function coverage. Coverage threshold: 80%.
 
 ## 14. Operational Concerns
 
@@ -601,7 +602,7 @@ Suggested production hardening:
 ## 15. Delivery Contents
 
 - Source code (11 source modules)
-- Test suite (168 tests, 94.25% line coverage, 30 test suites)
+- Test suite (176 tests, 94.58% line coverage, 32 test suites)
 - Multi-stage Dockerfile with non-root user and health check
 - docker-compose.yml (production + development profiles)
 - GitHub Actions CI (multi-Node matrix, coverage threshold, OpenAPI contract tests)
