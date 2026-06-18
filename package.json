@@ -1,6 +1,6 @@
 {
   "name": "release-guardian",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "Enterprise-grade release governance API with risk scoring, approval orchestration, and audit reporting.",
   "type": "module",
   "main": "src/server.js",

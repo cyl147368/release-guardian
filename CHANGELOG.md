@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented in this file.
 
+## 2.4.0 - 2026-06-18
+
+### Added
+
+- Comprehensive API documentation in all multilingual READMEs with curl examples and response samples
+- Additional API boundary tests for empty body, escalations, policy endpoints (4 tests)
+
+### Changed
+
+- docs/README.zh-CN.md expanded to 555 lines with complete API reference
+- docs/README.ja.md expanded to 323 lines with complete API reference
+- docs/README.ko.md expanded to 323 lines with complete API reference
+- Test count increased to 180 across 32 suites
+
 ## 2.3.0 - 2026-06-18
 
 ### Added
