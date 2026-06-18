@@ -1,6 +1,35 @@
+import { readFileSync } from "node:fs";
+import { join, extname } from "node:path";
 import { URL } from "node:url";
 
 import { etagFor, HttpError, jsonResponse, readJsonBody, textResponse } from "./lib/http.js";
+
+const MIME_TYPES = {
+  ".html": "text/html; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".js": "application/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".svg": "image/svg+xml",
+  ".ico": "image/x-icon"
+};
+
+const PUBLIC_DIR = join(import.meta.dirname, "..", "public");
+
+function serveStatic(pathname) {
+  const safePath = pathname.replace(/\.\./g, "");
+  const filePath = join(PUBLIC_DIR, safePath === "/" ? "index.html" : safePath);
+  try {
+    const data = readFileSync(filePath);
+    const ext = extname(filePath);
+    return {
+      statusCode: 200,
+      headers: { "content-type": MIME_TYPES[ext] || "application/octet-stream", "cache-control": "public, max-age=3600" },
+      body: data
+    };
+  } catch { return null; }
+}
 
 export function createApp(service) {
   return async function app(request) {
@@ -124,6 +153,10 @@ export function createApp(service) {
         const events = service.getWebhookEventLog(Object.fromEntries(url.searchParams));
         return jsonResponse(200, { data: events }, { etag: etagFor(events) });
       }
+
+      // 静态文件服务
+      const staticResponse = serveStatic(url.pathname);
+      if (staticResponse) return staticResponse;
 
       return jsonResponse(404, {
         error: {
