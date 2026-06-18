@@ -545,7 +545,7 @@ The automated test suite also checks that the OpenAPI contract continues to decl
 
 ## 13. Testing Strategy
 
-The project includes 146 automated tests across 25 test suites:
+The project includes 168 automated tests across 30 test suites:
 
 - Service-layer lifecycle tests (create, list, get, filter, paginate)
 - Approval workflow tests (approve, reject, SLA tracking)
@@ -601,7 +601,7 @@ Suggested production hardening:
 ## 15. Delivery Contents
 
 - Source code (11 source modules)
-- Test suite (146 tests, 94.12% line coverage, 25 test suites)
+- Test suite (168 tests, 94.25% line coverage, 30 test suites)
 - Multi-stage Dockerfile with non-root user and health check
 - docker-compose.yml (production + development profiles)
 - GitHub Actions CI (multi-Node matrix, coverage threshold, OpenAPI contract tests)

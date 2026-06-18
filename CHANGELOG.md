@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented in this file.
 
+## 2.1.0 - 2026-06-18
+
+### Added
+
+- Observability integration guide with OpenTelemetry, ELK, Datadog, Grafana examples (docs/OBSERVABILITY.md)
+- Architecture Decision Records for middleware pipeline, pagination strategy, error model (docs/adr/003-005)
+- Release notes document (RELEASE-NOTES.md)
+- 6 additional service-layer boundary tests for risk scoring, timeline, validation, policy, dashboard
+- Enhanced OpenAPI with detailed descriptions and examples for approval, deploy, escalation report, and policy endpoints
+
+### Changed
+
+- OpenAPI contract now includes examples for all major request/response flows
+- Test count increased to 168 across 30 suites
+
 ## 2.0.0 - 2026-06-18
 
 ### Added
