@@ -85,7 +85,9 @@ function switchView(view) {
     escalations: ["升级告警", "运营风险监控"],
     webhooks: ["Webhook 管理", "事件订阅与日志"],
     policy: ["治理策略", "审批路由与规则配置"],
-    audit: ["审计日志", "操作记录和状态变更历史"]
+    audit: ["审计日志", "操作记录和状态变更历史"],
+    metrics: ["性能监控", "系统性能指标和健康状态"],
+    settings: ["设置", "用户偏好和系统配置"]
   };
   const [title, subtitle] = titles[view] || [view, ""];
   document.getElementById("page-title").textContent = title;
@@ -106,6 +108,8 @@ function refreshCurrentView() {
     case "webhooks": loadWebhooks(); break;
     case "policy": loadPolicy(); break;
     case "audit": loadAuditLog(); break;
+    case "metrics": loadMetrics(); break;
+    case "settings": loadSettings(); break;
   }
 }
 
@@ -1226,3 +1230,200 @@ initBootSequence = function() {
   originalInitBootSequence();
   startStatsUpdate();
 };
+
+/* ═══════════ 性能监控 ═══════════ */
+async function loadMetrics() {
+  try {
+    const [metricsRes, healthRes] = await Promise.all([
+      apiFetch("/api/metrics"),
+      apiFetch("/ready")
+    ]);
+    
+    const metrics = metricsRes?.data || {};
+    const health = healthRes?.data || {};
+    
+    // 更新 KPI 卡片
+    animateValue("metric-requests", metrics.totalRequests || 0);
+    
+    const uptimeEl = document.getElementById("metric-uptime");
+    if (uptimeEl && metrics.uptime) {
+      uptimeEl.textContent = formatUptime(metrics.uptime);
+    }
+    
+    const latencyEl = document.getElementById("metric-latency");
+    if (latencyEl && metrics.avgResponseTime) {
+      latencyEl.textContent = `${Math.round(metrics.avgResponseTime)}ms`;
+    }
+    
+    const errorsEl = document.getElementById("metric-errors");
+    if (errorsEl) {
+      const errorRate = metrics.totalRequests > 0 
+        ? ((metrics.errors || 0) / metrics.totalRequests * 100).toFixed(2)
+        : "0";
+      errorsEl.textContent = `${errorRate}%`;
+    }
+    
+    // 渲染请求分布
+    renderRequestDistribution(metrics.byMethod || {});
+    
+    // 渲染系统状态
+    renderSystemStatus(health);
+  } catch (e) {
+    console.error("性能监控加载失败:", e);
+  }
+}
+
+function renderRequestDistribution(byMethod) {
+  const container = document.getElementById("request-distribution");
+  if (!container) return;
+  
+  const methods = Object.entries(byMethod);
+  if (methods.length === 0) {
+    container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-muted);">暂无请求数据</div>';
+    return;
+  }
+  
+  const max = Math.max(...methods.map(([, v]) => v), 1);
+  const colors = {
+    GET: "var(--status-ok)",
+    POST: "var(--status-info)",
+    PUT: "var(--status-warn)",
+    DELETE: "var(--status-error)",
+    PATCH: "var(--status-sync)"
+  };
+  
+  container.innerHTML = `
+    <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px 0;">
+      ${methods.map(([method, count]) => `
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 60px; font-family: var(--font-mono); font-size: 0.85rem; color: ${colors[method] || "var(--text-muted)"};">${method}</div>
+          <div style="flex: 1; height: 24px; background: var(--bg-raised); border-radius: 4px; overflow: hidden;">
+            <div style="width: ${(count / max) * 100}%; height: 100%; background: ${colors[method] || "var(--quantum-primary)"}; border-radius: 4px; transition: width 0.5s var(--ease-out);"></div>
+          </div>
+          <div style="width: 60px; text-align: right; font-family: var(--font-mono); font-size: 0.85rem;">${count}</div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderSystemStatus(health) {
+  const container = document.getElementById("system-status");
+  if (!container) return;
+  
+  const checks = health.checks || {};
+  const isReady = health.status === "ready";
+  
+  container.innerHTML = `
+    <div style="display: flex; flex-direction: column; gap: 16px; padding: 16px 0;">
+      <div style="display: flex; align-items: center; gap: 12px; padding: 16px; background: var(--bg-raised); border-radius: 8px;">
+        <div style="width: 12px; height: 12px; border-radius: 50%; background: ${isReady ? "var(--status-ok)" : "var(--status-error)"}; box-shadow: 0 0 8px ${isReady ? "var(--status-ok)" : "var(--status-error)"};"></div>
+        <div>
+          <div style="font-weight: 600;">服务状态</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted);">${isReady ? "正常运行" : "异常"}</div>
+        </div>
+      </div>
+      
+      ${Object.entries(checks).map(([name, check]) => `
+        <div style="display: flex; align-items: center; gap: 12px; padding: 16px; background: var(--bg-raised); border-radius: 8px;">
+          <div style="width: 12px; height: 12px; border-radius: 50%; background: ${check.status === "ok" ? "var(--status-ok)" : "var(--status-error)"}; box-shadow: 0 0 8px ${check.status === "ok" ? "var(--status-ok)" : "var(--status-error)"};"></div>
+          <div>
+            <div style="font-weight: 600;">${name}</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">${check.status === "ok" ? "正常" : check.message || "异常"}</div>
+          </div>
+        </div>
+      `).join("")}
+      
+      <div style="padding: 16px; background: var(--bg-raised); border-radius: 8px;">
+        <div style="font-weight: 600; margin-bottom: 8px;">版本信息</div>
+        <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted);">
+          Release Guardian v${health.version || "3.1.0"}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* ═══════════ 用户设置 ═══════════ */
+const DEFAULT_SETTINGS = {
+  theme: "dark",
+  language: "zh-CN",
+  pageSize: 20,
+  refreshInterval: 30,
+  notifications: true,
+  soundEffects: false
+};
+
+function loadSettings() {
+  const settings = getSettings();
+  const form = document.getElementById("settings-form");
+  if (!form) return;
+  
+  // 填充表单
+  form.theme.value = settings.theme;
+  form.language.value = settings.language;
+  form.pageSize.value = settings.pageSize;
+  form.refreshInterval.value = settings.refreshInterval;
+  form.notifications.checked = settings.notifications;
+  form.soundEffects.checked = settings.soundEffects;
+}
+
+function getSettings() {
+  try {
+    const saved = localStorage.getItem("rg-settings");
+    return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : { ...DEFAULT_SETTINGS };
+  } catch {
+    return { ...DEFAULT_SETTINGS };
+  }
+}
+
+function saveSettings(e) {
+  e.preventDefault();
+  const form = e.target;
+  const formData = new FormData(form);
+  
+  const settings = {
+    theme: formData.get("theme"),
+    language: formData.get("language"),
+    pageSize: parseInt(formData.get("pageSize")),
+    refreshInterval: parseInt(formData.get("refreshInterval")),
+    notifications: formData.has("notifications"),
+    soundEffects: formData.has("soundEffects")
+  };
+  
+  localStorage.setItem("rg-settings", JSON.stringify(settings));
+  
+  // 应用主题
+  if (settings.theme === "light") {
+    document.body.classList.add("light-theme");
+  } else {
+    document.body.classList.remove("light-theme");
+  }
+  
+  // 更新分页大小
+  pagination.limit = settings.pageSize;
+  
+  showToast("设置已保存", "success");
+}
+
+function resetSettings() {
+  localStorage.removeItem("rg-settings");
+  loadSettings();
+  showToast("设置已恢复默认", "info");
+}
+
+// 初始化设置
+function applySettings() {
+  const settings = getSettings();
+  
+  // 应用主题
+  if (settings.theme === "light") {
+    document.body.classList.add("light-theme");
+  }
+  
+  // 应用分页大小
+  pagination.limit = settings.pageSize;
+}
+
+// 在 DOMContentLoaded 时应用设置
+document.addEventListener("DOMContentLoaded", applySettings);
