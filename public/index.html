@@ -170,7 +170,24 @@
             </div>
           </div>
 
-          <div class="card">
+          <div class="kpi-grid" style="margin-top: 24px;">
+            <div class="kpi-card">
+              <div class="kpi-icon" style="background: var(--status-sync-bg); color: var(--status-sync);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </div>
+              <div class="kpi-value" id="stat-uptime">—</div>
+              <div class="kpi-label">运行时间</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-icon" style="background: var(--status-info-bg); color: var(--status-info);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              </div>
+              <div class="kpi-value" id="stat-requests">—</div>
+              <div class="kpi-label">总请求数</div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top: 24px;">
             <div class="card-header">
               <div>
                 <div class="card-title">风险分布</div>
@@ -188,10 +205,20 @@
           <div class="card">
             <div class="card-header">
               <div class="card-title">发布记录</div>
-              <button class="btn btn-primary" onclick="switchView('create')">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                新建发布
-              </button>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-ghost" onclick="exportReleases('csv')">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  CSV
+                </button>
+                <button class="btn btn-ghost" onclick="exportReleases('json')">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  JSON
+                </button>
+                <button class="btn btn-primary" onclick="switchView('create')">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  新建发布
+                </button>
+              </div>
             </div>
             <div class="data-table-container">
               <table class="data-table">

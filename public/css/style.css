@@ -1485,3 +1485,92 @@ a:hover {
 .mt-6 { margin-top: var(--space-6); }
 .mb-4 { margin-bottom: var(--space-4); }
 .mb-6 { margin-bottom: var(--space-6); }
+
+/* ═══════════ 亮色主题 ═══════════ */
+.light-theme {
+  --bg-void:     #f8f9fc;
+  --bg-deep:     #f0f1f5;
+  --bg-base:     #ffffff;
+  --bg-surface:  #ffffff;
+  --bg-raised:   #f5f6fa;
+  --bg-elevated: #ebedf2;
+  --bg-overlay:  #e2e4eb;
+  --border:      #d1d5e0;
+  --border-subtle: #e5e7f0;
+  --border-focus:  #a5b4fc;
+
+  --text-primary:   #1a1a2e;
+  --text-secondary: #6b7280;
+  --text-muted:     #9ca3af;
+  --text-inverse:   #ffffff;
+  --text-accent:    #4f46e5;
+
+  --quantum-primary:   #6366f1;
+  --quantum-secondary: #818cf8;
+  --quantum-tertiary:  #a5b4fc;
+  --quantum-glow:      rgba(99, 102, 241, 0.2);
+  --quantum-subtle:    rgba(99, 102, 241, 0.06);
+  --quantum-surface:   rgba(99, 102, 241, 0.08);
+
+  --status-ok:       #059669;
+  --status-ok-bg:    rgba(5, 150, 105, 0.08);
+  --status-warn:     #d97706;
+  --status-warn-bg:  rgba(217, 119, 6, 0.08);
+  --status-error:    #dc2626;
+  --status-error-bg: rgba(220, 38, 38, 0.08);
+  --status-info:     #2563eb;
+  --status-info-bg:  rgba(37, 99, 235, 0.08);
+  --status-sync:     #7c3aed;
+  --status-sync-bg:  rgba(124, 58, 237, 0.08);
+
+  --shadow-xs:  0 1px 2px rgba(0,0,0,0.05);
+  --shadow-sm:  0 2px 8px rgba(0,0,0,0.06);
+  --shadow:     0 4px 16px rgba(0,0,0,0.08);
+  --shadow-lg:  0 8px 32px rgba(0,0,0,0.10);
+  --shadow-xl:  0 16px 48px rgba(0,0,0,0.12);
+  --shadow-glow: 0 0 24px rgba(99, 102, 241, 0.15);
+}
+
+.light-theme body::before {
+  background: 
+    radial-gradient(ellipse 80% 50% at 20% 20%, rgba(99, 102, 241, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(139, 92, 246, 0.02) 0%, transparent 50%);
+}
+
+.light-theme .boot-screen {
+  background: var(--bg-void);
+}
+
+.light-theme .data-table tr:hover td {
+  background: rgba(99, 102, 241, 0.04);
+}
+
+.light-theme .toast {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.light-theme .modal {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.light-theme .sidebar {
+  background: var(--bg-base);
+  box-shadow: 1px 0 0 var(--border-subtle);
+}
+
+.light-theme .topbar {
+  background: var(--bg-base);
+  box-shadow: 0 1px 0 var(--border-subtle);
+}
+
+/* 打印优化 */
+@media print {
+  .light-theme {
+    --bg-void: white;
+    --bg-base: white;
+    --bg-surface: white;
+    --text-primary: black;
+    --text-secondary: #333;
+    --border: #ddd;
+  }
+}

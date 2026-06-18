@@ -805,3 +805,216 @@ function formatDate(iso) {
     minute: "2-digit"
   });
 }
+
+/* ═══════════ 数据导出 ═══════════ */
+function exportToCSV(data, filename) {
+  if (!data || data.length === 0) {
+    showToast("没有数据可导出", "warning");
+    return;
+  }
+  
+  const headers = Object.keys(data[0]);
+  const csv = [
+    headers.join(","),
+    ...data.map(row => headers.map(h => {
+      const val = row[h];
+      if (typeof val === "object") return `"${JSON.stringify(val).replace(/"/g, '""')}"`;
+      if (typeof val === "string" && (val.includes(",") || val.includes('"'))) {
+        return `"${val.replace(/"/g, '""')}"`;
+      }
+      return val;
+    }).join(","))
+  ].join("\n");
+  
+  downloadFile(csv, filename, "text/csv;charset=utf-8;");
+}
+
+function exportToJSON(data, filename) {
+  if (!data) {
+    showToast("没有数据可导出", "warning");
+    return;
+  }
+  
+  const json = JSON.stringify(data, null, 2);
+  downloadFile(json, filename, "application/json");
+}
+
+function downloadFile(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  showToast(`已导出 ${filename}`, "success");
+}
+
+async function exportReleases(format = "csv") {
+  try {
+    const { data } = await apiFetch("/api/releases?limit=1000");
+    if (!data || data.length === 0) {
+      showToast("没有发布记录可导出", "warning");
+      return;
+    }
+    
+    const exportData = data.map(r => ({
+      应用: r.application,
+      版本: r.version,
+      环境: r.environment,
+      状态: r.status,
+      风险评分: r.risk?.score || 0,
+      风险等级: r.risk?.band || "low",
+      负责人: r.owner,
+      服务层级: r.serviceTier,
+      变更类型: r.changeCategory,
+      创建时间: r.createdAt,
+      更新时间: r.updatedAt
+    }));
+    
+    const timestamp = new Date().toISOString().slice(0, 10);
+    if (format === "csv") {
+      exportToCSV(exportData, `releases-${timestamp}.csv`);
+    } else {
+      exportToJSON(exportData, `releases-${timestamp}.json`);
+    }
+  } catch (e) {
+    console.error("导出失败:", e);
+    showToast("导出失败", "error");
+  }
+}
+
+async function exportAuditLog(format = "csv") {
+  try {
+    const { data } = await apiFetch("/api/audit?limit=1000");
+    if (!data || data.length === 0) {
+      showToast("没有审计日志可导出", "warning");
+      return;
+    }
+    
+    const exportData = data.map(e => ({
+      ID: e.id,
+      时间: e.timestamp,
+      事件: e.event,
+      操作者: e.actor,
+      资源类型: e.resourceType,
+      资源ID: e.resourceId || "",
+      详情: JSON.stringify(e.details)
+    }));
+    
+    const timestamp = new Date().toISOString().slice(0, 10);
+    if (format === "csv") {
+      exportToCSV(exportData, `audit-log-${timestamp}.csv`);
+    } else {
+      exportToJSON(exportData, `audit-log-${timestamp}.json`);
+    }
+  } catch (e) {
+    console.error("导出失败:", e);
+    showToast("导出失败", "error");
+  }
+}
+
+/* ═══════════ 实时统计面板 ═══════════ */
+let statsUpdateInterval = null;
+
+function startStatsUpdate() {
+  stopStatsUpdate();
+  statsUpdateInterval = setInterval(async () => {
+    if (currentView === "dashboard") {
+      await updateRealtimeStats();
+    }
+  }, 10000);
+}
+
+function stopStatsUpdate() {
+  if (statsUpdateInterval) {
+    clearInterval(statsUpdateInterval);
+    statsUpdateInterval = null;
+  }
+}
+
+async function updateRealtimeStats() {
+  try {
+    const [dashboardRes, metricsRes] = await Promise.all([
+      apiFetch("/api/dashboard"),
+      apiFetch("/api/metrics")
+    ]);
+    
+    // 更新实时指标
+    const metrics = metricsRes?.data;
+    if (metrics) {
+      const uptimeEl = document.getElementById("stat-uptime");
+      if (uptimeEl && metrics.uptime) {
+        uptimeEl.textContent = formatUptime(metrics.uptime);
+      }
+      
+      const requestsEl = document.getElementById("stat-requests");
+      if (requestsEl && metrics.totalRequests) {
+        requestsEl.textContent = formatNumber(metrics.totalRequests);
+      }
+    }
+  } catch (e) {
+    console.warn("实时统计更新失败:", e);
+  }
+}
+
+function formatUptime(seconds) {
+  if (!seconds) return "—";
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  
+  if (days > 0) return `${days}天 ${hours}时`;
+  if (hours > 0) return `${hours}时 ${minutes}分`;
+  return `${minutes}分`;
+}
+
+function formatNumber(num) {
+  if (!num) return "0";
+  if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
+  if (num >= 1000) return (num / 1000).toFixed(1) + "K";
+  return num.toString();
+}
+
+/* ═══════════ 主题切换 ═══════════ */
+function toggleTheme() {
+  const body = document.body;
+  const isDark = body.classList.contains("light-theme");
+  
+  if (isDark) {
+    body.classList.remove("light-theme");
+    localStorage.setItem("theme", "dark");
+  } else {
+    body.classList.add("light-theme");
+    localStorage.setItem("theme", "light");
+  }
+}
+
+// 初始化主题
+function initTheme() {
+  const savedTheme = localStorage.getItem("theme");
+  if (savedTheme === "light") {
+    document.body.classList.add("light-theme");
+  }
+}
+
+// 在 DOMContentLoaded 时初始化主题
+document.addEventListener("DOMContentLoaded", initTheme);
+
+// 页面可见性变化时暂停/恢复统计更新
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    stopStatsUpdate();
+  } else {
+    startStatsUpdate();
+  }
+});
+
+// 在初始化时启动统计更新
+const originalInitBootSequence = initBootSequence;
+initBootSequence = function() {
+  originalInitBootSequence();
+  startStatsUpdate();
+};
