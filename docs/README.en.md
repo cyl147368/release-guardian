@@ -29,10 +29,16 @@ Release Guardian is a zero-dependency enterprise release governance platform tha
 | 🛡️ Multi-level Approval Routing | Auto-routes approval teams based on risk score and service tier |
 | 📊 Real-time Dashboard | Web console for live release status, risk distribution, SLA breaches |
 | 🔔 Webhook Events | Auto-push events to external systems on release state changes |
-| 📝 Audit Log | Complete operation records with multi-dimensional querying |
+| 📝 Audit Log | Complete operation records with multi-dimensional querying and export |
 | 📈 Prometheus Metrics | Built-in metrics collection, one-click Grafana integration |
 | 🐳 Container Ready | Docker + Kubernetes + Helm one-click deployment |
 | ✅ 93.66% Coverage | 262 test cases, enterprise-grade quality assurance |
+| 🔌 WebSocket Real-time Push | Zero-dependency WebSocket support with event subscription |
+| 📤 Data Export | CSV/JSON export for releases and audit logs |
+| 🎨 Quantum Observatory UI | 2026 design trends, eye-comfort colors, light/dark theme toggle |
+| 📱 Mobile Optimized | Responsive design, touch optimization, safe area adaptation |
+| ⚙️ User Preferences | Theme/language/pagination/refresh interval personalization |
+| 📊 Performance Monitoring | Request distribution, system health, real-time metrics visualization |
 
 ---
 
