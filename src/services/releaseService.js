@@ -62,6 +62,7 @@ export class ReleaseService {
       timestamp,
       needsManualApproval
     );
+    const conflicts = findReleaseConflicts(db.releases, input);
 
     const release = {
       id: randomUUID(),
@@ -75,6 +76,7 @@ export class ReleaseService {
       summary: input.summary.trim(),
       components: input.components.map((item) => item.trim()),
       controls: normalizeControls(input.controls),
+      conflicts,
       owner: input.owner.trim(),
       status: needsManualApproval ? "pending_approval" : "approved",
       risk,
@@ -95,6 +97,30 @@ export class ReleaseService {
     db.releases.push(release);
     await this.repository.save(db);
     return release;
+  }
+
+  async getReleaseConflicts(releaseId) {
+    const db = await this.repository.load();
+    const release = db.releases.find((item) => item.id === releaseId);
+    if (!release) {
+      throw new HttpError(404, "not_found", `Release ${releaseId} was not found.`);
+    }
+
+    const conflicts = findReleaseConflicts(db.releases, release, release.id);
+    release.conflicts = conflicts;
+    release.updatedAt = this.clock();
+    await this.repository.save(db);
+
+    return {
+      generatedAt: this.clock(),
+      releaseId: release.id,
+      application: release.application,
+      environment: release.environment,
+      plannedStartAt: release.plannedStartAt,
+      plannedEndAt: release.plannedEndAt,
+      totalConflicts: conflicts.length,
+      conflicts
+    };
   }
 
   async reviewRelease(releaseId, input) {
@@ -374,6 +400,42 @@ function matchesReleaseFilters(release, filters) {
       release.approvals.some((approval) => approval.status === "pending") ===
         filters.pendingApprovals)
   );
+}
+
+function findReleaseConflicts(releases, candidate, candidateId = null) {
+  return releases
+    .filter((release) => release.id !== candidateId)
+    .filter((release) => release.application === candidate.application)
+    .filter((release) => release.environment === candidate.environment)
+    .filter((release) => !["rejected", "rolled_back", "deployed"].includes(release.status))
+    .filter((release) =>
+      windowsOverlap(
+        release.plannedStartAt,
+        release.plannedEndAt,
+        candidate.plannedStartAt,
+        candidate.plannedEndAt
+      )
+    )
+    .map((release) => ({
+      releaseId: release.id,
+      application: release.application,
+      environment: release.environment,
+      status: release.status,
+      plannedStartAt: release.plannedStartAt,
+      plannedEndAt: release.plannedEndAt,
+      owner: release.owner,
+      riskBand: release.risk.band,
+      reason: "same application, same environment, overlapping release window"
+    }));
+}
+
+function windowsOverlap(leftStart, leftEnd, rightStart, rightEnd) {
+  const leftStartTime = new Date(leftStart).getTime();
+  const leftEndTime = new Date(leftEnd).getTime();
+  const rightStartTime = new Date(rightStart).getTime();
+  const rightEndTime = new Date(rightEnd).getTime();
+
+  return leftStartTime < rightEndTime && rightStartTime < leftEndTime;
 }
 
 function validateReleaseInput(input) {

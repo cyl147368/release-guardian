@@ -142,6 +142,10 @@ Returns a single release.
 
 Returns an audit evidence package containing control evidence, approval evidence, deployment outcome evidence, and release timeline data.
 
+### `GET /api/releases/:releaseId/conflicts`
+
+Returns release-window conflicts for the same application and environment. A conflict is reported when another active release overlaps the candidate release window.
+
 ### `POST /api/releases/:releaseId/approvals`
 
 Applies an approval or rejection decision.
@@ -318,6 +322,12 @@ curl http://localhost:3000/api/policy
 curl http://localhost:3000/api/releases/<releaseId>/evidence
 ```
 
+### Check Release-Window Conflicts
+
+```bash
+curl http://localhost:3000/api/releases/<releaseId>/conflicts
+```
+
 ## 12. Verification
 
 Recommended local verification sequence:
@@ -342,6 +352,7 @@ The project currently includes:
 - Governance filter tests
 - Policy endpoint tests
 - Audit evidence package tests
+- Release-window conflict tests
 
 Recommended next-stage additions:
 

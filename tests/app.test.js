@@ -162,6 +162,36 @@ test("GET /api/releases/:id/evidence returns audit package", async () => {
   assert.ok(body.data.evidence.some((item) => item.control === "deployment:outcome-recorded"));
 });
 
+test("GET /api/releases/:id/conflicts returns release-window conflicts", async () => {
+  const app = await createFixtureApp();
+  const firstPayload = createPayload();
+  firstPayload.environment = "production";
+  firstPayload.serviceTier = "tier_1";
+  firstPayload.plannedStartAt = "2026-06-21T08:00:00.000Z";
+  firstPayload.plannedEndAt = "2026-06-21T09:00:00.000Z";
+  firstPayload.components = ["frontend", "api"];
+  firstPayload.controls.customerImpactScore = 4;
+  firstPayload.controls.dataSensitivityScore = 5;
+
+  await app(buildRequest("POST", "/api/releases", firstPayload));
+
+  const secondPayload = {
+    ...firstPayload,
+    version: "2.1.1",
+    plannedStartAt: "2026-06-21T08:30:00.000Z",
+    plannedEndAt: "2026-06-21T09:30:00.000Z"
+  };
+  const createdResponse = await app(buildRequest("POST", "/api/releases", secondPayload));
+  const created = JSON.parse(createdResponse.body).data;
+
+  const response = await app(buildRequest("GET", `/api/releases/${created.id}/conflicts`));
+  const body = JSON.parse(response.body);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.data.totalConflicts, 1);
+  assert.equal(body.data.conflicts[0].application, "ops-portal");
+});
+
 test("POST /api/releases rejects score bounds outside policy", async () => {
   const app = await createFixtureApp();
   const payload = createPayload();

@@ -34,6 +34,12 @@ export function createApp(service) {
         return jsonResponse(200, { data: evidence }, { etag: etagFor(evidence) });
       }
 
+      const conflictMatch = url.pathname.match(/^\/api\/releases\/([^/]+)\/conflicts$/);
+      if (request.method === "GET" && conflictMatch) {
+        const conflicts = await service.getReleaseConflicts(conflictMatch[1]);
+        return jsonResponse(200, { data: conflicts }, { etag: etagFor(conflicts) });
+      }
+
       const approvalMatch = url.pathname.match(/^\/api\/releases\/([^/]+)\/approvals$/);
       if (request.method === "POST" && approvalMatch) {
         const body = await readJsonBody(request);

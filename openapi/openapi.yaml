@@ -96,6 +96,18 @@ paths:
       responses:
         "200":
           description: Evidence package
+  /api/releases/{releaseId}/conflicts:
+    get:
+      summary: Retrieve release-window conflicts for a release
+      parameters:
+        - in: path
+          name: releaseId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Release-window conflict report
   /api/releases/{releaseId}/approvals:
     post:
       summary: Approve or reject a release

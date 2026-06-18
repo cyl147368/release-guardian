@@ -224,6 +224,40 @@ test("listReleases rejects invalid query controls", async () => {
   );
 });
 
+test("createRelease records same-application window conflicts", async () => {
+  const repository = await createFixtureRepository();
+  const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");
+
+  const first = await service.createRelease(buildPayload());
+  const second = await service.createRelease({
+    ...buildPayload(),
+    version: "2026.06.18-b",
+    plannedStartAt: "2026-06-20T08:30:00.000Z",
+    plannedEndAt: "2026-06-20T10:00:00.000Z"
+  });
+
+  assert.equal(second.conflicts.length, 1);
+  assert.equal(second.conflicts[0].releaseId, first.id);
+});
+
+test("getReleaseConflicts returns current overlapping release windows", async () => {
+  const repository = await createFixtureRepository();
+  const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");
+
+  await service.createRelease(buildPayload());
+  const second = await service.createRelease({
+    ...buildPayload(),
+    version: "2026.06.18-c",
+    plannedStartAt: "2026-06-20T08:30:00.000Z",
+    plannedEndAt: "2026-06-20T10:00:00.000Z"
+  });
+
+  const conflicts = await service.getReleaseConflicts(second.id);
+
+  assert.equal(conflicts.totalConflicts, 1);
+  assert.equal(conflicts.conflicts[0].reason, "same application, same environment, overlapping release window");
+});
+
 test("getPolicy returns governance rules and score bounds", async () => {
   const repository = await createFixtureRepository();
   const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");

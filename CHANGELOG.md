@@ -10,7 +10,9 @@ All notable changes to this project are documented in this file.
 - Release list pagination, sorting, and pending approval filtering
 - Governance policy endpoint at `GET /api/policy`
 - Audit evidence endpoint at `GET /api/releases/:releaseId/evidence`
+- Release-window conflict endpoint at `GET /api/releases/:releaseId/conflicts`
 - Evidence package tests and API filter tests
+- Release-window conflict detection tests
 
 ### Changed
 
