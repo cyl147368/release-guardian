@@ -2,6 +2,8 @@ import { createServer } from "node:http";
 
 import { createApp } from "./app.js";
 import { sendResponse } from "./lib/http.js";
+import { createLogger } from "./lib/logger.js";
+import { withApiKeyAuth, withRateLimit, withRequestLogging } from "./lib/middleware.js";
 import { Repository } from "./repository.js";
 import { ReleaseService } from "./services/releaseService.js";
 
@@ -12,9 +14,24 @@ export function createRuntime({
   repository = new Repository(),
   service = new ReleaseService(repository),
   logger = console,
-  createServerImpl = createServer
+  structuredLogger = createLogger(),
+  createServerImpl = createServer,
+  enableRateLimit = process.env.RATE_LIMIT_ENABLED === "true",
+  rateLimitMax = Number(process.env.RATE_LIMIT_MAX || 100),
+  rateLimitWindowMs = Number(process.env.RATE_LIMIT_WINDOW_MS || 60_000),
+  apiKeys = process.env.API_KEYS ? process.env.API_KEYS.split(",").map((k) => k.trim()).filter(Boolean) : []
 } = {}) {
-  const app = createApp(service);
+  let app = createApp(service);
+
+  // Layer middleware: auth → rate limit → logging → app
+  if (apiKeys.length > 0) {
+    app = withApiKeyAuth(app, { apiKeys });
+  }
+  if (enableRateLimit) {
+    app = withRateLimit(app, { maxRequests: rateLimitMax, windowMs: rateLimitWindowMs });
+  }
+  app = withRequestLogging(app, structuredLogger);
+
   const server = createServerImpl(async (request, response) => {
     const payload = await app(request);
     sendResponse(response, payload);

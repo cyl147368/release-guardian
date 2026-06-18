@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Release Guardian API
-  version: 1.4.0
+  version: 1.5.0
   description: Enterprise-grade release governance and audit API.
 servers:
   - url: http://localhost:3000
@@ -344,6 +344,35 @@ components:
             $ref: "#/components/schemas/ErrorResponse"
     Conflict:
       description: Request conflicts with the current release state or governance policy.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Missing or invalid API key.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    TooManyRequests:
+      description: Rate limit exceeded.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds until the rate limit window resets.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: Maximum requests allowed in the window.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+          description: Requests remaining in the current window.
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+          description: Unix timestamp when the window resets.
       content:
         application/json:
           schema:

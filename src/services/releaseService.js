@@ -21,7 +21,7 @@ const RELEASE_STATUS = [
   "rolled_back"
 ];
 const APPROVAL_STATUS = ["pending", "approved", "rejected"];
-const SERVICE_VERSION = "1.4.0";
+const SERVICE_VERSION = "1.5.0";
 
 export class ReleaseService {
   constructor(repository, clock = nowIso) {

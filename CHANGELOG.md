@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## 1.5.0 - 2026-06-18
+
+### Added
+
+- Structured JSON logger with configurable log levels (`src/lib/logger.js`)
+- Request logging middleware with correlation IDs and timing (`src/lib/middleware.js`)
+- Rate limiting middleware with sliding window per client IP
+- API key authentication middleware with path whitelisting
+- `X-Request-Id` header propagation for distributed tracing
+- `X-RateLimit-*` response headers for client rate awareness
+- Environment variable configuration: `LOG_LEVEL`, `RATE_LIMIT_ENABLED`, `RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW_MS`, `API_KEYS`
+- 21 new tests for logger and middleware (61 total)
+
+### Changed
+
+- Bootstrap now layers middleware: auth, rate limiting, request logging
+- OpenAPI contract includes 401 Unauthorized and 429 TooManyRequests responses
+
 ## 1.4.0 - 2026-06-18
 
 ### Added

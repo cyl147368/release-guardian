@@ -63,6 +63,53 @@ Client / Automation
 - `src/lib/*.js`: small utility helpers
 - `tests/*.test.js`: service and API coverage
 
+
+## 4.1 Middleware Pipeline
+
+The request pipeline layers middleware outside-in:
+
+```text
+Request
+  → API Key Authentication (optional)
+    → Rate Limiting (optional)
+      → Request Logging + Correlation ID
+        → Application Handler
+```
+
+### Request Logging
+
+Every request receives a correlation ID (`X-Request-Id`). If the client sends one, it is reused; otherwise a UUID v4 is generated. The response always includes the `X-Request-Id` header. Log output is structured JSON with:
+
+- `request_started`: method, path, user agent, client IP
+- `request_completed`: method, path, status code, duration in ms
+- `request_failed`: method, path, error details (on unhandled exceptions)
+
+Log levels: `debug`, `info`, `warn`, `error`. Status codes >= 400 log at `warn`; >= 500 log at `error`.
+
+### Rate Limiting
+
+Sliding-window rate limiter keyed by client IP (`X-Forwarded-For` or `X-Real-Ip`). Response headers:
+
+- `X-RateLimit-Limit`: max requests per window
+- `X-RateLimit-Remaining`: requests left
+- `X-RateLimit-Reset`: unix timestamp when the window resets
+- `Retry-After`: seconds until the window resets (on 429)
+
+### API Key Authentication
+
+When `API_KEYS` is set (comma-separated), all endpoints except `/health`, `/ready`, and `/openapi` require a valid `X-API-Key` header. When no keys are configured, authentication is disabled.
+
+### Configuration
+
+| Variable | Default | Description |
+|---|---|---|
+| `LOG_LEVEL` | `info` | Minimum log level: debug, info, warn, error |
+| `RATE_LIMIT_ENABLED` | `false` | Enable rate limiting |
+| `RATE_LIMIT_MAX` | `100` | Max requests per window |
+| `RATE_LIMIT_WINDOW_MS` | `60000` | Window duration in ms |
+| `API_KEYS` | _(empty)_ | Comma-separated valid API keys |
+
+
 ## 5. Technology Choices
 
 - Language: JavaScript (ES modules)
