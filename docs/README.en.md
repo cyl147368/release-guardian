@@ -32,7 +32,7 @@ Release Guardian is a zero-dependency enterprise release governance platform tha
 | 📝 Audit Log | Complete operation records with multi-dimensional querying |
 | 📈 Prometheus Metrics | Built-in metrics collection, one-click Grafana integration |
 | 🐳 Container Ready | Docker + Kubernetes + Helm one-click deployment |
-| ✅ 96.75% Coverage | 218 test cases, enterprise-grade quality assurance |
+| ✅ 93.98% Coverage | 246 test cases, enterprise-grade quality assurance |
 
 ---
 
@@ -127,6 +127,20 @@ helm install release-guardian helm/release-guardian
 | `POST` | `/api/releases/:id/approvals` | Approve/reject |
 | `POST` | `/api/releases/:id/schedule` | Schedule release |
 | `POST` | `/api/releases/:id/deploy` | Deploy release |
+
+### Real-time (WebSocket)
+
+| Path | Description |
+|------|-------------|
+| `ws://localhost:3000/ws` | WebSocket connection endpoint |
+
+**Subscribe to events**:
+```json
+{
+  "type": "subscribe",
+  "events": ["release.created", "release.approved", "release.deployed"]
+}
+```
 
 ### Operations
 
