@@ -117,6 +117,14 @@ Returns a plain-text health response.
 
 Returns all releases sorted by creation time.
 
+Supported query filters:
+
+- `environment`
+- `status`
+- `riskBand`
+- `application`
+- `owner`
+
 ### `POST /api/releases`
 
 Creates a new release request.
@@ -124,6 +132,10 @@ Creates a new release request.
 ### `GET /api/releases/:releaseId`
 
 Returns a single release.
+
+### `GET /api/releases/:releaseId/evidence`
+
+Returns an audit evidence package containing control evidence, approval evidence, deployment outcome evidence, and release timeline data.
 
 ### `POST /api/releases/:releaseId/approvals`
 
@@ -148,6 +160,10 @@ Returns governance aggregates:
 - Approval SLA breaches
 - Change failure rate
 - Average lead time in hours
+
+### `GET /api/policy`
+
+Returns the active governance policy, including environments, release statuses, risk bands, approval routing, service tiers, and score bounds.
 
 ## 8. Error Model
 
@@ -193,23 +209,23 @@ Control flags:
 - `rollbackReady`
 - `monitoringReady`
 - `securityReviewed`
-- `customerImpactScore`
-- `dataSensitivityScore`
+- `customerImpactScore` from `0` to `5`
+- `dataSensitivityScore` from `0` to `5`
 
 ## 10. Quick Start
 
-### 8.1 Prerequisites
+### 10.1 Prerequisites
 
 - Node.js 20 or later
 - npm 10 or later
 
-### 8.2 Install
+### 10.2 Install
 
 ```bash
 npm install
 ```
 
-### 8.3 Run
+### 10.3 Run
 
 ```bash
 npm start
@@ -219,13 +235,13 @@ Server default:
 
 - URL: `http://localhost:3000`
 
-### 8.4 Test
+### 10.4 Test
 
 ```bash
 npm test
 ```
 
-### 8.5 Lint
+### 10.5 Lint
 
 ```bash
 npm run lint
@@ -273,6 +289,24 @@ curl -X POST http://localhost:3000/api/releases/<releaseId>/approvals \
   }'
 ```
 
+### Filter Releases
+
+```bash
+curl "http://localhost:3000/api/releases?environment=production&status=pending_approval&riskBand=critical"
+```
+
+### Retrieve Governance Policy
+
+```bash
+curl http://localhost:3000/api/policy
+```
+
+### Retrieve Audit Evidence
+
+```bash
+curl http://localhost:3000/api/releases/<releaseId>/evidence
+```
+
 ## 12. Verification
 
 Recommended local verification sequence:
@@ -294,6 +328,9 @@ The project currently includes:
 - Scheduling guardrail tests
 - Deployment metric tests
 - API smoke tests
+- Governance filter tests
+- Policy endpoint tests
+- Audit evidence package tests
 
 Recommended next-stage additions:
 
@@ -424,7 +461,7 @@ Additional detailed documentation is provided below so globally distributed team
 
 - Add AI-assisted release risk explanation
 - Add adaptive approval routing
-- Add compliance evidence packaging
+- Add compliance evidence export formats
 
 ## 19. Repository Layout
 
@@ -439,6 +476,7 @@ release-guardian/
 ├── scripts/seed-demo.js
 ├── src/
 │   ├── app.js
+│   ├── bootstrap.js
 │   ├── lib/
 │   │   ├── http.js
 │   │   ├── time.js
@@ -449,6 +487,7 @@ release-guardian/
 │       └── releaseService.js
 └── tests/
     ├── app.test.js
+    ├── bootstrap.test.js
     └── releaseService.test.js
 ```
 

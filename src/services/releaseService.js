@@ -5,8 +5,8 @@ import { addHours, compareIso, nowIso } from "../lib/time.js";
 import {
   assertArray,
   assertEnum,
+  assertIntegerRange,
   assertIsoTimestamp,
-  assertPositiveInteger,
   assertString
 } from "../lib/validation.js";
 
@@ -28,10 +28,12 @@ export class ReleaseService {
     this.clock = clock;
   }
 
-  async listReleases() {
+  async listReleases(filters = {}) {
+    validateReleaseFilters(filters);
     const db = await this.repository.load();
     return db.releases
       .map((release) => refreshApprovalSla(release, this.clock()))
+      .filter((release) => matchesReleaseFilters(release, filters))
       .slice()
       .sort((left, right) => compareIso(right.createdAt, left.createdAt));
   }
@@ -231,6 +233,55 @@ export class ReleaseService {
     return release;
   }
 
+  async getPolicy() {
+    return buildPolicySnapshot(this.clock());
+  }
+
+  async getEvidencePackage(releaseId) {
+    const release = await this.getRelease(releaseId);
+    const controls = buildControlEvidence(release);
+    const approvalEvidence = release.approvals.map((approval) => ({
+      control: `approval:${approval.team}`,
+      displayName: approval.displayName,
+      status: approval.status,
+      passed: approval.status === "approved",
+      actor: approval.actor,
+      requestedAt: approval.requestedAt,
+      updatedAt: approval.updatedAt,
+      slaHours: approval.slaHours,
+      slaBreached: approval.slaBreached,
+      comment: approval.comment
+    }));
+
+    const deploymentEvidence = {
+      control: "deployment:outcome-recorded",
+      passed: ["deployed", "rolled_back"].includes(release.status),
+      status: release.status,
+      deployment: release.deployment
+    };
+
+    const evidence = [...controls, ...approvalEvidence, deploymentEvidence];
+    const passed = evidence.filter((item) => item.passed).length;
+
+    return {
+      generatedAt: this.clock(),
+      releaseId: release.id,
+      application: release.application,
+      version: release.version,
+      environment: release.environment,
+      status: release.status,
+      risk: release.risk,
+      summary: {
+        totalControls: evidence.length,
+        passedControls: passed,
+        failedControls: evidence.length - passed,
+        auditReady: evidence.every((item) => item.passed)
+      },
+      evidence,
+      timeline: release.timeline
+    };
+  }
+
   async getDashboard() {
     const db = await this.repository.load();
     const releases = db.releases;
@@ -267,6 +318,35 @@ export class ReleaseService {
       averageLeadHours
     };
   }
+}
+
+function validateReleaseFilters(filters) {
+  if (filters.environment) {
+    assertEnum(filters.environment, "environment", ENVIRONMENTS);
+  }
+  if (filters.status) {
+    assertEnum(filters.status, "status", RELEASE_STATUS);
+  }
+  if (filters.riskBand) {
+    assertEnum(filters.riskBand, "riskBand", ["low", "medium", "high", "critical"]);
+  }
+  if (filters.application && typeof filters.application !== "string") {
+    throw new HttpError(400, "validation_error", "application must be a string.");
+  }
+  if (filters.owner && typeof filters.owner !== "string") {
+    throw new HttpError(400, "validation_error", "owner must be a string.");
+  }
+}
+
+function matchesReleaseFilters(release, filters) {
+  return (
+    (!filters.environment || release.environment === filters.environment) &&
+    (!filters.status || release.status === filters.status) &&
+    (!filters.riskBand || release.risk.band === filters.riskBand) &&
+    (!filters.application ||
+      release.application.toLowerCase().includes(filters.application.toLowerCase())) &&
+    (!filters.owner || release.owner.toLowerCase().includes(filters.owner.toLowerCase()))
+  );
 }
 
 function validateReleaseInput(input) {
@@ -306,8 +386,8 @@ function validateControls(controls) {
     }
   }
 
-  assertPositiveInteger(controls.customerImpactScore, "customerImpactScore");
-  assertPositiveInteger(controls.dataSensitivityScore, "dataSensitivityScore");
+  assertIntegerRange(controls.customerImpactScore, "customerImpactScore", 0, 5);
+  assertIntegerRange(controls.dataSensitivityScore, "dataSensitivityScore", 0, 5);
 }
 
 function normalizeControls(controls) {
@@ -476,6 +556,106 @@ function calculateAverageLeadHours(releases) {
     }, 0) / deployed.length;
 
   return Number(average.toFixed(2));
+}
+
+function buildPolicySnapshot(generatedAt) {
+  return {
+    generatedAt,
+    environments: ENVIRONMENTS,
+    releaseStatuses: RELEASE_STATUS,
+    approvalStatuses: APPROVAL_STATUS,
+    serviceTiers: [
+      {
+        code: "tier_1",
+        description: "Mission-critical service with heightened approval requirements."
+      },
+      {
+        code: "tier_2",
+        description: "Important business service with standard production controls."
+      },
+      {
+        code: "tier_3",
+        description: "Lower criticality service eligible for lighter governance."
+      }
+    ],
+    riskBands: [
+      { code: "low", minScore: 0, maxScore: 39, manualApprovalRequired: false },
+      { code: "medium", minScore: 40, maxScore: 69, manualApprovalRequired: false },
+      { code: "high", minScore: 70, maxScore: 84, manualApprovalRequired: true },
+      { code: "critical", minScore: 85, maxScore: 100, manualApprovalRequired: true }
+    ],
+    approvalRouting: [
+      {
+        team: "release_management",
+        appliesWhen: "All releases",
+        slaHours: {
+          default: 4,
+          critical: 2
+        }
+      },
+      {
+        team: "sre",
+        appliesWhen: "Risk score is 70 or higher",
+        slaHours: {
+          default: 4
+        }
+      },
+      {
+        team: "security",
+        appliesWhen: "Risk score is 85 or higher, or service tier is tier_1",
+        slaHours: {
+          default: 8
+        }
+      }
+    ],
+    controlScoreBounds: {
+      customerImpactScore: { min: 0, max: 5 },
+      dataSensitivityScore: { min: 0, max: 5 }
+    }
+  };
+}
+
+function buildControlEvidence(release) {
+  return [
+    {
+      control: "control:automated-tests",
+      passed: release.controls.automatedTestsPassed,
+      status: release.controls.automatedTestsPassed ? "passed" : "failed",
+      description: "Automated tests passed before release approval."
+    },
+    {
+      control: "control:rollback-ready",
+      passed: release.controls.rollbackReady,
+      status: release.controls.rollbackReady ? "passed" : "failed",
+      description: "Rollback plan was ready before release approval."
+    },
+    {
+      control: "control:monitoring-ready",
+      passed: release.controls.monitoringReady,
+      status: release.controls.monitoringReady ? "passed" : "failed",
+      description: "Monitoring was ready before release approval."
+    },
+    {
+      control: "control:security-reviewed",
+      passed: release.controls.securityReviewed,
+      status: release.controls.securityReviewed ? "passed" : "failed",
+      description: "Security review was completed or deemed not required."
+    },
+    {
+      control: "control:customer-impact-bounded",
+      passed: release.controls.customerImpactScore <= 5,
+      status: release.controls.customerImpactScore <= 5 ? "passed" : "failed",
+      value: release.controls.customerImpactScore,
+      description: "Customer impact score is within the configured governance bound."
+    },
+    {
+      control: "control:data-sensitivity-bounded",
+      passed: release.controls.dataSensitivityScore <= 5,
+      status: release.controls.dataSensitivityScore <= 5 ? "passed" : "failed",
+      value: release.controls.dataSensitivityScore,
+      description: "Data sensitivity score is within the configured governance bound."
+    }
+  ];
 }
 
 export { APPROVAL_STATUS, ENVIRONMENTS, RELEASE_STATUS };

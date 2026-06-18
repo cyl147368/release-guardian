@@ -22,6 +22,16 @@ export function assertPositiveInteger(value, field) {
   }
 }
 
+export function assertIntegerRange(value, field, min, max) {
+  if (!Number.isInteger(value) || value < min || value > max) {
+    throw new HttpError(
+      400,
+      "validation_error",
+      `${field} must be an integer between ${min} and ${max}.`
+    );
+  }
+}
+
 export function assertArray(value, field) {
   if (!Array.isArray(value)) {
     throw new HttpError(400, "validation_error", `${field} must be an array.`);

@@ -81,6 +81,90 @@ test("GET /api/dashboard returns aggregate data", async () => {
   assert.equal(body.data.byEnvironment.staging, 1);
 });
 
+test("GET /api/releases supports filters", async () => {
+  const app = await createFixtureApp();
+  await app(buildRequest("POST", "/api/releases", createPayload()));
+  const response = await app(buildRequest("GET", "/api/releases?environment=staging&status=approved&riskBand=medium"));
+  const body = JSON.parse(response.body);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.data.length, 1);
+  assert.equal(body.data[0].application, "ops-portal");
+});
+
+test("GET /api/policy returns governance policy", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("GET", "/api/policy"));
+  const body = JSON.parse(response.body);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.data.riskBands[2].code, "high");
+});
+
+test("GET /api/releases/:id/evidence returns audit package", async () => {
+  const app = await createFixtureApp();
+  const payload = createPayload();
+  payload.environment = "production";
+  payload.serviceTier = "tier_1";
+  payload.components = ["frontend", "api", "worker"];
+  payload.controls.customerImpactScore = 4;
+  payload.controls.dataSensitivityScore = 5;
+
+  const createdResponse = await app(buildRequest("POST", "/api/releases", payload));
+  const created = JSON.parse(createdResponse.body).data;
+
+  const approvalInputs = [
+    ["release_management", "manager"],
+    ["sre", "sre-lead"]
+  ];
+  for (const [team, actor] of approvalInputs) {
+    await app(buildRequest("POST", `/api/releases/${created.id}/approvals`, {
+      team,
+      actor,
+      decision: "approved"
+    }));
+  }
+
+  const approvalResponse = await app(buildRequest("POST", `/api/releases/${created.id}/approvals`, {
+    team: "security",
+    actor: "security-lead",
+    decision: "approved"
+  }));
+  const approved = JSON.parse(approvalResponse.body).data;
+
+  const scheduledResponse = await app(buildRequest("POST", `/api/releases/${approved.id}/schedule`, {
+    actor: "release-bot",
+    scheduledAt: "2026-06-21T10:00:00.000Z"
+  }));
+  const scheduled = JSON.parse(scheduledResponse.body).data;
+
+  await app(buildRequest("POST", `/api/releases/${scheduled.id}/deploy`, {
+    actor: "release-bot",
+    outcome: "deployed",
+    startedAt: "2026-06-21T10:00:00.000Z",
+    finishedAt: "2026-06-21T10:30:00.000Z"
+  }));
+
+  const response = await app(buildRequest("GET", `/api/releases/${scheduled.id}/evidence`));
+  const body = JSON.parse(response.body);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.data.summary.auditReady, true);
+  assert.ok(body.data.evidence.some((item) => item.control === "deployment:outcome-recorded"));
+});
+
+test("POST /api/releases rejects score bounds outside policy", async () => {
+  const app = await createFixtureApp();
+  const payload = createPayload();
+  payload.controls.customerImpactScore = 6;
+
+  const response = await app(buildRequest("POST", "/api/releases", payload));
+  const body = JSON.parse(response.body);
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(body.error.code, "validation_error");
+});
+
 test("POST /api/releases rejects invalid JSON", async () => {
   const app = await createFixtureApp();
   const stream = Readable.from(["{invalid"]);

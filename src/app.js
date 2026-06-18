@@ -12,7 +12,7 @@ export function createApp(service) {
       }
 
       if (request.method === "GET" && url.pathname === "/api/releases") {
-        const releases = await service.listReleases();
+        const releases = await service.listReleases(Object.fromEntries(url.searchParams));
         return jsonResponse(200, { data: releases }, { etag: etagFor(releases) });
       }
 
@@ -26,6 +26,12 @@ export function createApp(service) {
       if (request.method === "GET" && releaseMatch) {
         const release = await service.getRelease(releaseMatch[1]);
         return jsonResponse(200, { data: release }, { etag: etagFor(release) });
+      }
+
+      const evidenceMatch = url.pathname.match(/^\/api\/releases\/([^/]+)\/evidence$/);
+      if (request.method === "GET" && evidenceMatch) {
+        const evidence = await service.getEvidencePackage(evidenceMatch[1]);
+        return jsonResponse(200, { data: evidence }, { etag: etagFor(evidence) });
       }
 
       const approvalMatch = url.pathname.match(/^\/api\/releases\/([^/]+)\/approvals$/);
@@ -52,6 +58,11 @@ export function createApp(service) {
       if (request.method === "GET" && url.pathname === "/api/dashboard") {
         const dashboard = await service.getDashboard();
         return jsonResponse(200, { data: dashboard }, { etag: etagFor(dashboard) });
+      }
+
+      if (request.method === "GET" && url.pathname === "/api/policy") {
+        const policy = await service.getPolicy();
+        return jsonResponse(200, { data: policy }, { etag: etagFor(policy) });
       }
 
       return jsonResponse(404, {

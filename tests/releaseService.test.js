@@ -121,6 +121,93 @@ test("createRelease auto-approves low-risk releases consistently", async () => {
   assert.equal(release.approvals.every((item) => item.status === "approved"), true);
 });
 
+test("listReleases filters by environment, status, application, owner, and risk band", async () => {
+  const repository = await createFixtureRepository();
+  const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");
+
+  await service.createRelease(buildPayload());
+  await service.createRelease({
+    application: "docs-site",
+    version: "1.0.0",
+    environment: "development",
+    serviceTier: "tier_3",
+    changeCategory: "standard",
+    plannedStartAt: "2026-06-18T08:00:00.000Z",
+    plannedEndAt: "2026-06-18T09:00:00.000Z",
+    summary: "Publish a minor documentation update.",
+    components: ["site"],
+    owner: "bob",
+    controls: {
+      automatedTestsPassed: true,
+      rollbackReady: true,
+      monitoringReady: true,
+      securityReviewed: true,
+      customerImpactScore: 0,
+      dataSensitivityScore: 0
+    }
+  });
+
+  const production = await service.listReleases({ environment: "production" });
+  const approvedDocs = await service.listReleases({
+    status: "approved",
+    application: "docs",
+    owner: "bob",
+    riskBand: "low"
+  });
+
+  assert.equal(production.length, 1);
+  assert.equal(production[0].environment, "production");
+  assert.equal(approvedDocs.length, 1);
+  assert.equal(approvedDocs[0].application, "docs-site");
+});
+
+test("getPolicy returns governance rules and score bounds", async () => {
+  const repository = await createFixtureRepository();
+  const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");
+
+  const policy = await service.getPolicy();
+
+  assert.equal(policy.serviceTiers.length, 3);
+  assert.equal(policy.riskBands[3].code, "critical");
+  assert.equal(policy.controlScoreBounds.customerImpactScore.max, 5);
+});
+
+test("getEvidencePackage assembles audit-ready release evidence", async () => {
+  const repository = await createFixtureRepository();
+  const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");
+  const release = await service.createRelease(buildPayload());
+
+  for (const [team, actor] of [
+    ["release_management", "manager"],
+    ["sre", "sre-lead"],
+    ["security", "security-lead"]
+  ]) {
+    await service.reviewRelease(release.id, {
+      team,
+      actor,
+      decision: "approved"
+    });
+  }
+
+  await service.scheduleRelease(release.id, {
+    actor: "release-bot",
+    scheduledAt: "2026-06-20T08:00:00.000Z"
+  });
+  await service.deployRelease(release.id, {
+    actor: "release-bot",
+    outcome: "deployed",
+    startedAt: "2026-06-20T08:00:00.000Z",
+    finishedAt: "2026-06-20T08:30:00.000Z"
+  });
+
+  const evidence = await service.getEvidencePackage(release.id);
+
+  assert.equal(evidence.summary.auditReady, true);
+  assert.ok(evidence.evidence.some((item) => item.control === "control:automated-tests"));
+  assert.ok(evidence.evidence.some((item) => item.control === "approval:release_management"));
+  assert.equal(evidence.evidence.at(-1).control, "deployment:outcome-recorded");
+});
+
 test("deployRelease records deployment outcome and dashboard metrics", async () => {
   const repository = await createFixtureRepository();
   const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");

@@ -15,6 +15,30 @@ paths:
   /api/releases:
     get:
       summary: List releases
+      parameters:
+        - in: query
+          name: environment
+          schema:
+            type: string
+            enum: [development, staging, production]
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [draft, pending_approval, approved, rejected, scheduled, deployed, rolled_back]
+        - in: query
+          name: riskBand
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+        - in: query
+          name: application
+          schema:
+            type: string
+        - in: query
+          name: owner
+          schema:
+            type: string
       responses:
         "200":
           description: Release list
@@ -35,6 +59,18 @@ paths:
       responses:
         "200":
           description: Release payload
+  /api/releases/{releaseId}/evidence:
+    get:
+      summary: Retrieve audit evidence package for a release
+      parameters:
+        - in: path
+          name: releaseId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Evidence package
   /api/releases/{releaseId}/approvals:
     post:
       summary: Approve or reject a release
@@ -77,3 +113,9 @@ paths:
       responses:
         "200":
           description: Dashboard payload
+  /api/policy:
+    get:
+      summary: Retrieve release governance policy
+      responses:
+        "200":
+          description: Policy payload

@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented in this file.
 
+## 1.2.0 - 2026-06-18
+
+### Added
+
+- Release list filtering by environment, status, risk band, application, and owner
+- Governance policy endpoint at `GET /api/policy`
+- Audit evidence endpoint at `GET /api/releases/:releaseId/evidence`
+- Evidence package tests and API filter tests
+
+### Changed
+
+- Customer impact and data sensitivity scores are now bounded to `0` through `5`
+- OpenAPI and README now document the expanded governance API surface
+
 ## 1.1.0 - 2026-06-18
 
 ### Added
