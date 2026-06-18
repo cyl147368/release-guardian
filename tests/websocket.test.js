@@ -1,12 +1,31 @@
-import { describe, it } from "node:test";
+import { describe, it, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { createWebSocketServer } from "../src/lib/websocket.js";
 import { randomUUID } from "node:crypto";
 
+// 跟踪所有打开的服务器以便清理
+const openServers = new Set();
+
+function trackServer(server) {
+  openServers.add(server);
+  return server;
+}
+
+afterEach(() => {
+  for (const server of openServers) {
+    try {
+      server.close();
+    } catch (e) {
+      // 忽略已关闭的服务器
+    }
+  }
+  openServers.clear();
+});
+
 describe("WebSocket 实时推送", () => {
   it("创建 WebSocket 服务器并返回控制方法", () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     const ws = createWebSocketServer({ httpServer });
     
     assert.ok(ws.broadcast);
@@ -19,7 +38,7 @@ describe("WebSocket 实时推送", () => {
   });
 
   it("getClients 返回空数组当无连接时", () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     const ws = createWebSocketServer({ httpServer });
     
     const clients = ws.getClients();
@@ -30,7 +49,7 @@ describe("WebSocket 实时推送", () => {
   });
 
   it("broadcast 不抛出错误当无连接时", () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     const ws = createWebSocketServer({ httpServer });
     
     assert.doesNotThrow(() => {
@@ -41,7 +60,7 @@ describe("WebSocket 实时推送", () => {
   });
 
   it("支持自定义回调函数", () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     let connectionCalled = false;
     let messageCalled = false;
     let disconnectCalled = false;
@@ -67,7 +86,7 @@ import { request } from "node:http";
 
 describe("WebSocket 集成", () => {
   it("WebSocket 握手成功", async () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     const ws = createWebSocketServer({ httpServer });
     
     await new Promise((resolve) => {
@@ -99,7 +118,7 @@ describe("WebSocket 集成", () => {
   });
 
   it("非 /ws 路径拒绝升级", async () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     const ws = createWebSocketServer({ httpServer });
     
     await new Promise((resolve) => {
@@ -133,7 +152,7 @@ describe("WebSocket 集成", () => {
   });
 
   it("缺少 Sec-WebSocket-Key 时拒绝连接", async () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     const ws = createWebSocketServer({ httpServer });
     
     await new Promise((resolve) => {
@@ -168,7 +187,7 @@ describe("WebSocket 集成", () => {
 
 describe("WebSocket 帧编码", () => {
   it("小帧 (< 126 字节) 正确编码", () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     const ws = createWebSocketServer({ httpServer });
     
     // 通过 broadcast 间接测试帧编码
@@ -181,7 +200,7 @@ describe("WebSocket 帧编码", () => {
   });
 
   it("中等帧 (126-65535 字节) 正确编码", () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     const ws = createWebSocketServer({ httpServer });
     
     // 创建一个较大的消息
@@ -196,7 +215,7 @@ describe("WebSocket 帧编码", () => {
 
 describe("WebSocket 订阅管理", () => {
   it("支持事件订阅过滤", () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     const ws = createWebSocketServer({ httpServer });
     
     // 验证初始状态
@@ -208,7 +227,7 @@ describe("WebSocket 订阅管理", () => {
   });
 
   it("broadcast 只发送给订阅的客户端", () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     const ws = createWebSocketServer({ httpServer });
     
     // 无连接时 broadcast 不抛错
@@ -222,7 +241,7 @@ describe("WebSocket 订阅管理", () => {
 
 describe("WebSocket 回调集成", () => {
   it("onConnection 回调在连接时触发", () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     let connectionId = null;
     
     const ws = createWebSocketServer({
@@ -238,7 +257,7 @@ describe("WebSocket 回调集成", () => {
   });
 
   it("onDisconnect 回调在断开时触发", () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     let disconnectedId = null;
     
     const ws = createWebSocketServer({
@@ -253,7 +272,7 @@ describe("WebSocket 回调集成", () => {
   });
 
   it("onMessage 回调在收到消息时触发", () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     let receivedMessage = null;
     
     const ws = createWebSocketServer({
@@ -270,7 +289,7 @@ describe("WebSocket 回调集成", () => {
 
 describe("WebSocket 边界情况", () => {
   it("多次 broadcast 不影响服务器状态", () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     const ws = createWebSocketServer({ httpServer });
     
     for (let i = 0; i < 100; i++) {
@@ -285,7 +304,7 @@ describe("WebSocket 边界情况", () => {
   });
 
   it("发送空数据不抛错", () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     const ws = createWebSocketServer({ httpServer });
     
     assert.doesNotThrow(() => {
@@ -299,7 +318,7 @@ describe("WebSocket 边界情况", () => {
   });
 
   it("发送特殊字符数据不抛错", () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     const ws = createWebSocketServer({ httpServer });
     
     assert.doesNotThrow(() => {
@@ -317,7 +336,7 @@ describe("WebSocket 边界情况", () => {
 describe("WebSocket 协议细节", () => {
   it("encodeFrame 正确处理小帧 (< 126 字节)", () => {
     // 通过 broadcast 间接测试
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     const ws = createWebSocketServer({ httpServer });
     
     // 小消息应该使用 2 字节头
@@ -329,7 +348,7 @@ describe("WebSocket 协议细节", () => {
   });
 
   it("encodeFrame 正确处理中等帧 (126-65535 字节)", () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     const ws = createWebSocketServer({ httpServer });
     
     // 创建一个较大的消息 (>126 字节)
@@ -342,7 +361,7 @@ describe("WebSocket 协议细节", () => {
   });
 
   it("sendToClient 正确发送给指定客户端", () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     const ws = createWebSocketServer({ httpServer });
     
     // 无连接时调用 sendToClient 不应抛错
@@ -357,7 +376,7 @@ describe("WebSocket 协议细节", () => {
 
 describe("WebSocket 心跳机制", () => {
   it("心跳间隔正确设置", () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     const ws = createWebSocketServer({ httpServer });
     
     // 验证服务器创建成功
@@ -369,7 +388,7 @@ describe("WebSocket 心跳机制", () => {
   });
 
   it("无连接时心跳不抛错", () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     const ws = createWebSocketServer({ httpServer });
     
     // 等待一个心跳周期
@@ -382,7 +401,7 @@ describe("WebSocket 心跳机制", () => {
 
 describe("WebSocket 连接管理", () => {
   it("getClients 返回正确的客户端信息", () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     const ws = createWebSocketServer({ httpServer });
     
     const clients = ws.getClients();
@@ -393,7 +412,7 @@ describe("WebSocket 连接管理", () => {
   });
 
   it("getConnectionCount 返回正确的连接数", () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     const ws = createWebSocketServer({ httpServer });
     
     assert.equal(ws.getConnectionCount(), 0);
@@ -402,7 +421,7 @@ describe("WebSocket 连接管理", () => {
   });
 
   it("broadcast 支持通配符订阅", () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     const ws = createWebSocketServer({ httpServer });
     
     // 默认订阅 "*"
@@ -433,7 +452,7 @@ describe("WebSocket 错误恢复", () => {
   });
 
   it("广播大量消息不溢出", () => {
-    const httpServer = createServer();
+    const httpServer = trackServer(createServer());
     const ws = createWebSocketServer({ httpServer });
     
     for (let i = 0; i < 1000; i++) {

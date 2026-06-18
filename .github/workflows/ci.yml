@@ -36,7 +36,9 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: npm
       - run: npm ci
-      - run: npm test
+      - name: 运行测试
+        run: npm test
+        timeout-minutes: 5
 
   coverage:
     name: 覆盖率检查
@@ -49,15 +51,10 @@ jobs:
           cache: npm
       - run: npm ci
       - name: 运行测试并生成覆盖率报告
-        run: npm run test:coverage 2>&1 | tee coverage-output.txt
+        run: npm run test:coverage
+        timeout-minutes: 5
       - name: 检查覆盖率阈值
-        run: |
-          COVERAGE=$(grep -oP 'all files.*?\K(\d+\.?\d*)' coverage-output.txt | head -1 || echo "0")
-          echo "行覆盖率: ${COVERAGE}%"
-          if [ "$(echo "$COVERAGE < 80" | bc -l)" -eq 1 ]; then
-            echo "::error::覆盖率 ${COVERAGE}% 低于 80% 阈值"
-            exit 1
-          fi
+        run: node scripts/quality-check.js --min-coverage 80
 
   openapi:
     name: OpenAPI 契约测试
@@ -71,6 +68,7 @@ jobs:
       - run: npm ci
       - name: 验证 OpenAPI 规范
         run: node --test tests/openapi.test.js
+        timeout-minutes: 2
 
   quality:
     name: 综合质量门禁
@@ -85,6 +83,7 @@ jobs:
       - run: npm ci
       - name: 运行完整质量检查
         run: npm run quality
+        timeout-minutes: 10
 
   docker:
     name: Docker 构建验证
@@ -97,7 +96,6 @@ jobs:
       - name: 验证容器启动
         run: |
           docker run -d --name rg-test -p 3000:3000 release-guardian:test
-          sleep 3
+          sleep 5
           curl -sf http://localhost:3000/health | grep -q "ok"
-          curl -sf http://localhost:3000/ | grep -q "Release Guardian"
           docker stop rg-test

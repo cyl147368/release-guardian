@@ -1427,3 +1427,226 @@ function applySettings() {
 
 // 在 DOMContentLoaded 时应用设置
 document.addEventListener("DOMContentLoaded", applySettings);
+
+/* ═══════════ 2026 AI 增强功能 ═══════════ */
+
+// 智能搜索建议
+let searchSuggestions = [];
+let searchDebounceTimer = null;
+
+function initSmartSearch() {
+  const input = document.getElementById("search-input");
+  if (!input) return;
+  
+  // 创建建议容器
+  const suggestionsContainer = document.createElement("div");
+  suggestionsContainer.className = "search-suggestions";
+  suggestionsContainer.id = "search-suggestions";
+  input.parentNode.appendChild(suggestionsContainer);
+  
+  input.addEventListener("input", (e) => {
+    clearTimeout(searchDebounceTimer);
+    const query = e.target.value.trim();
+    
+    if (query.length < 2) {
+      hideSuggestions();
+      return;
+    }
+    
+    searchDebounceTimer = setTimeout(() => {
+      showSmartSuggestions(query);
+    }, 300);
+  });
+  
+  input.addEventListener("focus", () => {
+    const suggestions = document.getElementById("search-suggestions");
+    if (suggestions && suggestions.children.length > 0) {
+      suggestions.classList.add("visible");
+    }
+  });
+  
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".search-container")) {
+      hideSuggestions();
+    }
+  });
+}
+
+async function showSmartSuggestions(query) {
+  try {
+    const { data } = await apiFetch(`/api/releases?limit=5&application=${encodeURIComponent(query)}`);
+    
+    const container = document.getElementById("search-suggestions");
+    if (!container || !data || data.length === 0) {
+      hideSuggestions();
+      return;
+    }
+    
+    container.innerHTML = data.map(release => `
+      <div class="suggestion-item" onclick="selectSuggestion('${release.application}')">
+        <div class="suggestion-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+          </svg>
+        </div>
+        <div class="suggestion-content">
+          <div class="suggestion-title">${escapeHtml(release.application)}</div>
+          <div class="suggestion-meta">${release.environment} • ${release.status}</div>
+        </div>
+      </div>
+    `).join("");
+    
+    container.classList.add("visible");
+  } catch (e) {
+    console.warn("搜索建议加载失败:", e);
+  }
+}
+
+function selectSuggestion(application) {
+  const input = document.getElementById("search-input");
+  if (input) {
+    input.value = application;
+    hideSuggestions();
+    switchView("releases");
+    loadReleases(application);
+  }
+}
+
+function hideSuggestions() {
+  const container = document.getElementById("search-suggestions");
+  if (container) {
+    container.classList.remove("visible");
+  }
+}
+
+// 键盘快捷键增强
+function initKeyboardShortcuts() {
+  document.addEventListener("keydown", (e) => {
+    // Ctrl/Cmd + K 聚焦搜索
+    if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+      e.preventDefault();
+      document.getElementById("search-input")?.focus();
+    }
+    
+    // Ctrl/Cmd + / 显示快捷键帮助
+    if ((e.ctrlKey || e.metaKey) && e.key === "/") {
+      e.preventDefault();
+      showKeyboardShortcutsHelp();
+    }
+    
+    // Escape 关闭模态框和建议
+    if (e.key === "Escape") {
+      closeModal();
+      hideSuggestions();
+    }
+    
+    // 数字键切换视图 (Alt + 1-7)
+    if (e.altKey && ["1", "2", "3", "4", "5", "6", "7"].includes(e.key)) {
+      e.preventDefault();
+      const views = ["dashboard", "releases", "create", "escalations", "webhooks", "policy", "audit"];
+      const viewIndex = parseInt(e.key) - 1;
+      if (views[viewIndex]) {
+        switchView(views[viewIndex]);
+      }
+    }
+    
+    // N 键创建新发布
+    if (e.key === "n" && !e.ctrlKey && !e.metaKey && !isInputFocused()) {
+      switchView("create");
+    }
+    
+    // R 键刷新当前视图
+    if (e.key === "r" && !e.ctrlKey && !e.metaKey && !isInputFocused()) {
+      refreshCurrentView();
+    }
+  });
+}
+
+function isInputFocused() {
+  const activeElement = document.activeElement;
+  return activeElement && (
+    activeElement.tagName === "INPUT" ||
+    activeElement.tagName === "TEXTAREA" ||
+    activeElement.tagName === "SELECT" ||
+    activeElement.isContentEditable
+  );
+}
+
+function showKeyboardShortcutsHelp() {
+  const shortcuts = [
+    { keys: "Ctrl + K", description: "聚焦搜索" },
+    { keys: "Ctrl + /", description: "显示快捷键帮助" },
+    { keys: "Alt + 1-7", description: "切换视图" },
+    { keys: "N", description: "创建新发布" },
+    { keys: "R", description: "刷新当前视图" },
+    { keys: "Esc", description: "关闭弹窗" }
+  ];
+  
+  const body = `
+    <div style="display: grid; gap: 12px;">
+      ${shortcuts.map(s => `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-subtle);">
+          <span style="color: var(--text-secondary);">${s.description}</span>
+          <kbd style="padding: 4px 8px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: 4px; font-family: var(--font-mono); font-size: 0.85rem;">${s.keys}</kbd>
+        </div>
+      `).join("")}
+    </div>
+  `;
+  
+  showModal("键盘快捷键", body);
+}
+
+// 自动刷新状态指示
+let autoRefreshEnabled = true;
+let autoRefreshInterval = 30000;
+let autoRefreshTimer = null;
+
+function startAutoRefresh(interval = 30000) {
+  stopAutoRefresh();
+  autoRefreshInterval = interval;
+  autoRefreshEnabled = true;
+  
+  autoRefreshTimer = setInterval(() => {
+    if (autoRefreshEnabled && !document.hidden) {
+      refreshCurrentView();
+    }
+  }, interval);
+  
+  updateAutoRefreshIndicator();
+}
+
+function stopAutoRefresh() {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+  autoRefreshEnabled = false;
+  updateAutoRefreshIndicator();
+}
+
+function toggleAutoRefresh() {
+  if (autoRefreshEnabled) {
+    stopAutoRefresh();
+  } else {
+    startAutoRefresh(autoRefreshInterval);
+  }
+}
+
+function updateAutoRefreshIndicator() {
+  const indicator = document.getElementById("auto-refresh-indicator");
+  if (indicator) {
+    indicator.className = `auto-refresh-indicator ${autoRefreshEnabled ? "active" : ""}`;
+    indicator.title = autoRefreshEnabled ? "自动刷新已开启" : "自动刷新已关闭";
+  }
+}
+
+// 页面可见性变化时暂停/恢复自动刷新
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    stopAutoRefresh();
+  } else {
+    if (autoRefreshEnabled) {
+      startAutoRefresh(autoRefreshInterval);
+    }
+  }
+});
