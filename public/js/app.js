@@ -1,14 +1,18 @@
 /* ═══════════════════════════════════════════════════════
-   Release Guardian — 前端控制台逻辑
+   Release Guardian v3.1 — 量子发布治理前端
    ═══════════════════════════════════════════════════════ */
 
 const API = window.location.origin;
 
-/* ── 状态 ── */
+/* ── 状态管理 ── */
 let currentView = "dashboard";
 let pagination = { offset: 0, limit: 20 };
+let ws = null;
+let wsReconnectTimer = null;
+let wsReconnectAttempts = 0;
+const WS_MAX_RECONNECT = 5;
 
-/* ── 启动序列 ── */
+/* ── 初始化 ── */
 document.addEventListener("DOMContentLoaded", () => {
   initBootSequence();
 });
@@ -25,18 +29,18 @@ function initBootSequence() {
   // 延迟移除开机画面
   setTimeout(() => {
     boot.classList.add("hidden");
-    shell.style.opacity = "1";
+    shell.classList.add("visible");
+    
     // 数据加载
     checkHealth();
     loadDashboard();
+    
     // 初始化 WebSocket 实时推送
     initWebSocket();
-    // 启动自动刷新
-    startAutoRefresh();
-  }, 2000);
+  }, 2500);
 }
 
-/* ── 导航 ── */
+/* ── 导航系统 ── */
 function initNavigation() {
   document.querySelectorAll(".nav-item").forEach(item => {
     item.addEventListener("click", () => {
@@ -103,7 +107,7 @@ function refreshCurrentView() {
   }
 }
 
-/* ── 搜索 ── */
+/* ── 搜索功能 ── */
 function initSearch() {
   const input = document.getElementById("search-input");
   let timer;
@@ -113,7 +117,6 @@ function initSearch() {
       const q = input.value.trim();
       if (q.length > 0) {
         switchView("releases");
-        // 将搜索词传递给发布列表
         loadReleases(q);
       }
     }, 400);
@@ -122,11 +125,18 @@ function initSearch() {
 
 /* ── 模态框 ── */
 function initModal() {
+  const backdrop = document.getElementById("modal-backdrop");
   const modal = document.getElementById("detail-modal");
-  document.getElementById("modal-close").addEventListener("click", () => modal.close());
-  modal.addEventListener("click", (e) => {
-    if (e.target === modal || e.target.classList.contains("modal-backdrop")) {
-      modal.close();
+  
+  document.getElementById("modal-close").addEventListener("click", () => {
+    backdrop.classList.remove("active");
+    modal.classList.remove("active");
+  });
+  
+  backdrop.addEventListener("click", (e) => {
+    if (e.target === backdrop) {
+      backdrop.classList.remove("active");
+      modal.classList.remove("active");
     }
   });
 }
@@ -134,7 +144,13 @@ function initModal() {
 function showModal(title, bodyHtml) {
   document.getElementById("modal-title").textContent = title;
   document.getElementById("modal-body").innerHTML = bodyHtml;
-  document.getElementById("detail-modal").showModal();
+  document.getElementById("modal-backdrop").classList.add("active");
+  document.getElementById("detail-modal").classList.add("active");
+}
+
+function closeModal() {
+  document.getElementById("modal-backdrop").classList.remove("active");
+  document.getElementById("detail-modal").classList.remove("active");
 }
 
 /* ── API 请求 ── */
@@ -172,7 +188,6 @@ async function checkHealth() {
     if (data.data?.status === "ready") {
       dot.className = "health-dot ok";
       text.textContent = "服务正常";
-      // 获取版本号
       const ver = data.data?.version;
       if (ver) {
         document.getElementById("version-tag").textContent = `v${ver}`;
@@ -202,155 +217,136 @@ async function loadDashboard() {
     const escalations = (data.approvalSlaBreaches ?? 0);
     const badge = document.getElementById("escalation-badge");
     if (escalations > 0) {
+      badge.style.display = "flex";
       badge.textContent = escalations;
-      badge.style.display = "inline";
     } else {
       badge.style.display = "none";
     }
 
-    // 图表
-    renderBarChart("risk-chart", data.riskDistribution, {
-      low: "#34d399", medium: "#fbbf24", high: "#f87171", critical: "#ef4444"
-    });
-    renderBarChart("env-chart", data.byEnvironment, {
-      development: "#60a5fa", staging: "#fbbf24", production: "#f87171"
-    });
-    renderBarChart("status-chart", data.byStatus, {
-      draft: "#5a6485", pending_approval: "#fbbf24", approved: "#34d399",
-      rejected: "#f87171", scheduled: "#60a5fa", deployed: "#10b981", rolled_back: "#f97316"
-    });
-  } catch {
-    // 错误已处理
+    // 风险分布图表
+    renderRiskChart(data.byRiskBand || {});
+  } catch (e) {
+    console.error("仪表板加载失败:", e);
   }
 }
 
-function animateValue(elementId, targetValue) {
+function renderRiskChart(bands) {
+  const chart = document.getElementById("risk-chart");
+  if (!chart) return;
+  
+  const max = Math.max(...Object.values(bands), 1);
+  const colors = {
+    low: "var(--status-ok)",
+    medium: "var(--status-warn)",
+    high: "var(--status-error)",
+    critical: "var(--status-error)"
+  };
+  
+  chart.innerHTML = Object.entries(bands).map(([band, count]) => `
+    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+      <div style="width: 100%; height: ${(count / max) * 150}px; background: ${colors[band] || "var(--quantum-primary)"}; border-radius: 4px 4px 0 0; transition: height 0.5s var(--ease-out);"></div>
+      <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">${band}</div>
+      <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">${count}</div>
+    </div>
+  `).join("");
+}
+
+function animateValue(elementId, end) {
   const el = document.getElementById(elementId);
   if (!el) return;
+  
+  const duration = 1000;
   const start = parseInt(el.textContent) || 0;
-  const duration = 600;
   const startTime = performance.now();
-
-  function update(now) {
-    const elapsed = now - startTime;
+  
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
     const progress = Math.min(elapsed / duration, 1);
-    // ease-out cubic
-    const eased = 1 - Math.pow(1 - progress, 3);
-    const current = Math.round(start + (targetValue - start) * eased);
-    el.textContent = current;
-    if (progress < 1) requestAnimationFrame(update);
+    const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+    const current = Math.round(start + (end - start) * eased);
+    el.textContent = current.toLocaleString();
+    
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    }
   }
+  
   requestAnimationFrame(update);
 }
 
-function renderBarChart(containerId, data, colors) {
-  const container = document.getElementById(containerId);
-  if (!data || Object.keys(data).length === 0) {
-    container.innerHTML = '<div class="empty-state">暂无数据</div>';
-    return;
-  }
-  const max = Math.max(...Object.values(data), 1);
-  container.innerHTML = Object.entries(data).map(([key, val]) => {
-    const pct = (val / max) * 100;
-    const color = colors[key] || "#7c6cf0";
-    return `
-      <div class="bar-chart-item">
-        <div class="bar-label">${escapeHtml(key)}</div>
-        <div class="bar-track">
-          <div class="bar-fill" style="width:${pct}%;background:${color}"></div>
-        </div>
-        <div class="bar-value">${val}</div>
-      </div>`;
-  }).join("");
-}
-
 /* ═══════════ 发布列表 ═══════════ */
-async function loadReleases(searchQuery) {
-  const env = document.getElementById("filter-env").value;
-  const status = document.getElementById("filter-status").value;
-  const risk = document.getElementById("filter-risk").value;
-
-  const params = new URLSearchParams();
-  if (env) params.set("environment", env);
-  if (status) params.set("status", status);
-  if (risk) params.set("riskBand", risk);
-  if (searchQuery) params.set("application", searchQuery);
-  params.set("limit", pagination.limit);
-  params.set("offset", pagination.offset);
-
+async function loadReleases(searchQuery = "") {
   try {
-    const { data, pagination: pg } = await apiFetch(`/api/releases?${params}`);
-    renderReleasesTable(data);
-    renderPagination(pg);
-  } catch {}
+    const params = new URLSearchParams({
+      limit: pagination.limit,
+      offset: pagination.offset
+    });
+    if (searchQuery) params.set("application", searchQuery);
+
+    const { data, pagination: p } = await apiFetch(`/api/releases?${params}`);
+    
+    const tbody = document.getElementById("releases-tbody");
+    if (!data || data.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="empty-state">
+            <div class="empty-state-title">暂无发布记录</div>
+            <div class="empty-state-description">点击上方按钮创建第一个发布</div>
+          </td>
+        </tr>`;
+      return;
+    }
+
+    tbody.innerHTML = data.map(r => `
+      <tr onclick="showReleaseDetail('${r.id}')" style="cursor: pointer;">
+        <td><strong>${escapeHtml(r.application)}</strong></td>
+        <td><code>${escapeHtml(r.version)}</code></td>
+        <td>${r.environment}</td>
+        <td><span class="risk-${r.risk?.band || 'low'}">${r.risk?.score || 0}</span></td>
+        <td><span class="status-badge status-${r.status}">${r.status}</span></td>
+        <td>${formatDate(r.createdAt)}</td>
+        <td>
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); showReleaseDetail('${r.id}')">
+            详情
+          </button>
+        </td>
+      </tr>
+    `).join("");
+
+    // 分页
+    renderPagination(p);
+  } catch (e) {
+    console.error("发布列表加载失败:", e);
+  }
 }
 
-function renderReleasesTable(releases) {
-  const tbody = document.getElementById("releases-tbody");
-  if (!releases.length) {
-    tbody.innerHTML = `<tr><td colspan="8" class="empty-state">暂无发布记录</td></tr>`;
+function renderPagination(p) {
+  const container = document.getElementById("releases-pagination");
+  if (!container || !p) return;
+  
+  const totalPages = Math.ceil(p.total / p.limit);
+  const currentPage = Math.floor(p.offset / p.limit) + 1;
+  
+  if (totalPages <= 1) {
+    container.innerHTML = "";
     return;
   }
-  tbody.innerHTML = releases.map(r => `
-    <tr>
-      <td><strong style="color:var(--text-primary)">${escapeHtml(r.application)}</strong></td>
-      <td><code style="font-family:var(--font-mono);font-size:0.8rem;color:var(--accent-bright)">${escapeHtml(r.version)}</code></td>
-      <td><span class="tag tag-env">${escapeHtml(r.environment)}</span></td>
-      <td><span class="tag tag-status">${statusLabel(r.status)}</span></td>
-      <td><span class="tag tag-risk-${r.riskBand}">${riskLabel(r.riskBand)}</span></td>
-      <td>${escapeHtml(r.owner)}</td>
-      <td style="font-family:var(--font-mono);font-size:0.78rem;color:var(--text-muted)">${formatTime(r.createdAt)}</td>
-      <td>
-        <button class="btn btn-outline btn-sm" onclick="showReleaseDetail('${r.id}')">详情</button>
-      </td>
-    </tr>`).join("");
-}
-
-async function showReleaseDetail(id) {
-  try {
-    const { data: r } = await apiFetch(`/api/releases/${id}`);
-    const html = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-        <div><strong>应用</strong><br>${escapeHtml(r.application)}</div>
-        <div><strong>版本</strong><br><code>${escapeHtml(r.version)}</code></div>
-        <div><strong>环境</strong><br><span class="tag tag-env">${escapeHtml(r.environment)}</span></div>
-        <div><strong>状态</strong><br><span class="tag tag-status">${statusLabel(r.status)}</span></div>
-        <div><strong>风险</strong><br><span class="tag tag-risk-${r.riskBand}">${riskLabel(r.riskBand)} (${r.riskScore})</span></div>
-        <div><strong>负责人</strong><br>${escapeHtml(r.owner)}</div>
-        <div><strong>服务层级</strong><br>${escapeHtml(r.serviceTier)}</div>
-        <div><strong>变更类别</strong><br>${escapeHtml(r.changeCategory)}</div>
-        <div style="grid-column:1/-1"><strong>摘要</strong><br>${escapeHtml(r.summary)}</div>
-        <div style="grid-column:1/-1"><strong>组件</strong><br>${(r.components||[]).map(c => `<span class="tag tag-env" style="margin-right:4px">${escapeHtml(c)}</span>`).join("")}</div>
-      </div>
-      ${r.approvals?.length ? `
-      <h4 style="margin-top:20px;margin-bottom:8px;font-size:0.85rem">审批记录</h4>
-      <table class="policy-table">
-        <tr><th>团队</th><th>状态</th><th>SLA(时)</th><th>审批人</th><th>备注</th></tr>
-        ${r.approvals.map(a => `<tr>
-          <td>${escapeHtml(a.team)}</td>
-          <td>${escapeHtml(a.status)}</td>
-          <td>${a.slaHours ?? '-'}</td>
-          <td>${escapeHtml(a.approver || '-')}</td>
-          <td>${escapeHtml(a.comment || '-')}</td>
-        </tr>`).join("")}
-      </table>` : ""}
-    `;
-    showModal(`${r.application}@${r.version}`, html);
-  } catch {}
-}
-
-function renderPagination(pg) {
-  const container = document.getElementById("pagination");
-  if (!pg) { container.innerHTML = ""; return; }
-
-  const totalPages = Math.ceil(pg.total / pg.limit);
-  const currentPage = Math.floor(pg.offset / pg.limit) + 1;
-
-  container.innerHTML = `
-    <button ${currentPage <= 1 ? "disabled" : ""} onclick="goToPage(${currentPage - 1})">上一页</button>
-    <span class="page-info">${currentPage} / ${totalPages || 1}</span>
-    <button ${!pg.hasMore ? "disabled" : ""} onclick="goToPage(${currentPage + 1})">下一页</button>
-  `;
+  
+  let html = '<button class="pagination-btn" onclick="goToPage(' + (currentPage - 1) + ')" ' + (currentPage <= 1 ? 'disabled' : '') + '>上一页</button>';
+  
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === currentPage) {
+      html += `<button class="pagination-btn active">${i}</button>`;
+    } else if (i <= 3 || i >= totalPages - 2 || Math.abs(i - currentPage) <= 1) {
+      html += `<button class="pagination-btn" onclick="goToPage(${i})">${i}</button>`;
+    } else if (i === 4 || i === totalPages - 3) {
+      html += '<span class="pagination-info">...</span>';
+    }
+  }
+  
+  html += '<button class="pagination-btn" onclick="goToPage(' + (currentPage + 1) + ')" ' + (currentPage >= totalPages ? 'disabled' : '') + '>下一页</button>';
+  
+  container.innerHTML = html;
 }
 
 function goToPage(page) {
@@ -358,42 +354,131 @@ function goToPage(page) {
   loadReleases();
 }
 
+async function showReleaseDetail(id) {
+  try {
+    const { data: release } = await apiFetch(`/api/releases/${id}`);
+    
+    const body = `
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div>
+          <div class="form-label">应用</div>
+          <div>${escapeHtml(release.application)}</div>
+        </div>
+        <div>
+          <div class="form-label">版本</div>
+          <div><code>${escapeHtml(release.version)}</code></div>
+        </div>
+        <div>
+          <div class="form-label">环境</div>
+          <div>${release.environment}</div>
+        </div>
+        <div>
+          <div class="form-label">状态</div>
+          <div><span class="status-badge status-${release.status}">${release.status}</span></div>
+        </div>
+        <div>
+          <div class="form-label">风险评分</div>
+          <div class="risk-${release.risk?.band}">${release.risk?.score} (${release.risk?.band})</div>
+        </div>
+        <div>
+          <div class="form-label">负责人</div>
+          <div>${escapeHtml(release.owner)}</div>
+        </div>
+      </div>
+      <div style="margin-top: 20px;">
+        <div class="form-label">发布摘要</div>
+        <div>${escapeHtml(release.summary)}</div>
+      </div>
+      <div style="margin-top: 20px;">
+        <div class="form-label">审批状态</div>
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+          ${(release.approvals || []).map(a => `
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: var(--bg-raised); border-radius: 8px;">
+              <div>
+                <div style="font-weight: 600;">${a.displayName}</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">${a.team}</div>
+              </div>
+              <span class="status-badge status-${a.status}">${a.status}</span>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+      ${release.status === "pending_approval" ? `
+        <div style="margin-top: 24px; display: flex; gap: 12px;">
+          <button class="btn btn-primary" onclick="approveRelease('${release.id}', 'release_management', 'approved')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            批准
+          </button>
+          <button class="btn btn-ghost" style="color: var(--status-error);" onclick="approveRelease('${release.id}', 'release_management', 'rejected')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            拒绝
+          </button>
+        </div>
+      ` : ""}
+    `;
+    
+    showModal(`发布详情: ${release.application} v${release.version}`, body);
+  } catch (e) {
+    console.error("获取发布详情失败:", e);
+  }
+}
+
+async function approveRelease(id, team, decision) {
+  try {
+    await apiFetch(`/api/releases/${id}/approvals`, {
+      method: "POST",
+      body: JSON.stringify({
+        team,
+        status: decision,
+        actor: "admin",
+        decision
+      })
+    });
+    showToast(`发布已${decision === "approved" ? "批准" : "拒绝"}`, decision === "approved" ? "success" : "warning");
+    closeModal();
+    refreshCurrentView();
+  } catch (e) {
+    console.error("审批操作失败:", e);
+  }
+}
+
 /* ═══════════ 创建发布 ═══════════ */
 async function handleCreateRelease(e) {
   e.preventDefault();
-
+  const form = e.target;
+  const formData = new FormData(form);
+  
   const payload = {
-    application: document.getElementById("f-application").value.trim(),
-    version: document.getElementById("f-version").value.trim(),
-    environment: document.getElementById("f-environment").value,
-    serviceTier: document.getElementById("f-serviceTier").value,
-    changeCategory: document.getElementById("f-changeCategory").value,
-    owner: document.getElementById("f-owner").value.trim(),
-    plannedStartAt: new Date(document.getElementById("f-plannedStartAt").value).toISOString(),
-    plannedEndAt: new Date(document.getElementById("f-plannedEndAt").value).toISOString(),
-    summary: document.getElementById("f-summary").value.trim(),
-    components: document.getElementById("f-components").value.split(",").map(s => s.trim()).filter(Boolean),
+    application: formData.get("application"),
+    version: formData.get("version"),
+    environment: formData.get("environment"),
+    serviceTier: formData.get("serviceTier"),
+    changeCategory: formData.get("changeCategory"),
+    owner: formData.get("owner"),
+    plannedStartAt: new Date(formData.get("plannedStartAt")).toISOString(),
+    plannedEndAt: new Date(formData.get("plannedEndAt")).toISOString(),
+    summary: formData.get("summary"),
+    components: formData.get("components").split(",").map(s => s.trim()).filter(Boolean),
     controls: {
-      automatedTestsPassed: document.getElementById("f-automatedTestsPassed").checked,
-      rollbackReady: document.getElementById("f-rollbackReady").checked,
-      monitoringReady: document.getElementById("f-monitoringReady").checked,
-      securityReviewed: document.getElementById("f-securityReviewed").checked
-    },
-    customerImpactScore: Number(document.getElementById("f-customerImpactScore").value),
-    dataSensitivityScore: Number(document.getElementById("f-dataSensitivityScore").value)
+      automatedTestsPassed: formData.has("automatedTestsPassed"),
+      rollbackReady: formData.has("rollbackReady"),
+      monitoringReady: formData.has("monitoringReady"),
+      securityReviewed: true,
+      customerImpactScore: parseInt(formData.get("customerImpactScore") || "0"),
+      dataSensitivityScore: parseInt(formData.get("dataSensitivityScore") || "0")
+    }
   };
-
+  
   try {
-    const result = await apiFetch("/api/releases", {
+    await apiFetch("/api/releases", {
       method: "POST",
       body: JSON.stringify(payload)
     });
-
-    document.getElementById("create-result").style.display = "block";
-    document.getElementById("create-result-content").textContent = JSON.stringify(result, null, 2);
     showToast("发布请求创建成功", "success");
-  } catch {
-    // 错误已处理
+    form.reset();
+    switchView("releases");
+  } catch (e) {
+    console.error("创建发布失败:", e);
   }
 }
 
@@ -401,248 +486,178 @@ async function handleCreateRelease(e) {
 async function loadEscalations() {
   try {
     const { data } = await apiFetch("/api/escalations");
-    const container = document.getElementById("escalations-content");
-
-    const items = [
-      ...data.overdueApprovals.map(a => ({
-        type: "warning",
-        title: `审批超时: ${a.application}@${a.version}`,
-        detail: `团队 ${a.team} 超过 SLA ${a.hoursOverdue} 小时`
-      })),
-      ...data.highRiskPending.map(r => ({
-        type: "danger",
-        title: `高风险待处理: ${r.application}@${r.version}`,
-        detail: `风险分 ${r.riskScore}，环境 ${r.environment}`
-      })),
-      ...data.conflicts.map(c => ({
-        type: "info",
-        title: `窗口冲突: ${c.application}`,
-        detail: `与发布 ${c.conflictingReleaseId} 存在时间冲突`
-      }))
-    ];
-
-    if (!items.length) {
-      container.innerHTML = '<div class="empty-state">暂无升级告警，一切正常</div>';
-    } else {
-      container.innerHTML = items.map(i => `
-        <div class="escalation-item" style="border-left-color:var(--${i.type})">
-          <h4>${escapeHtml(i.title)}</h4>
-          <p>${escapeHtml(i.detail)}</p>
-        </div>`).join("");
+    
+    const container = document.getElementById("escalations-list");
+    if (!data || data.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-title">暂无告警</div>
+          <div class="empty-state-description">所有发布审批都在 SLA 范围内</div>
+        </div>`;
+      return;
     }
-  } catch {}
+
+    container.innerHTML = data.map(e => `
+      <div style="padding: 16px; background: var(--bg-raised); border-radius: 12px; margin-bottom: 12px; border-left: 3px solid var(--status-error);">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 600;">${escapeHtml(e.application)} v${escapeHtml(e.version)}</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">${e.environment} • ${e.team}</div>
+          </div>
+          <span class="status-badge status-pending">待处理</span>
+        </div>
+      </div>
+    `).join("");
+  } catch (e) {
+    console.error("升级告警加载失败:", e);
+  }
 }
 
-/* ═══════════ Webhook ═══════════ */
+/* ═══════════ Webhook 管理 ═══════════ */
 async function loadWebhooks() {
   try {
     const { data } = await apiFetch("/api/webhooks");
-    const container = document.getElementById("webhooks-list");
-    if (!data.length) {
-      container.innerHTML = '<div class="empty-state">暂无 Webhook 订阅</div>';
-    } else {
-      container.innerHTML = data.map(w => `
-        <div class="webhook-item">
-          <div>
-            <div class="url">${escapeHtml(w.url)}</div>
-            <div class="events">${escapeHtml(w.events.join(", "))}</div>
-          </div>
-          <button class="btn btn-danger btn-sm" onclick="deleteWebhook('${w.id}')">删除</button>
-        </div>`).join("");
+    
+    const tbody = document.getElementById("webhooks-tbody");
+    if (!data || data.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="4" class="empty-state">
+            <div class="empty-state-title">暂无 Webhook 订阅</div>
+            <div class="empty-state-description">点击上方按钮添加第一个订阅</div>
+          </td>
+        </tr>`;
+      return;
     }
-  } catch {}
 
-  try {
-    const { data } = await apiFetch("/api/webhooks/events?limit=20");
-    const container = document.getElementById("webhook-events");
-    if (!data.length) {
-      container.innerHTML = '<div class="empty-state">暂无事件记录</div>';
-    } else {
-      container.innerHTML = `<pre class="code-block">${JSON.stringify(data, null, 2)}</pre>`;
-    }
-  } catch {}
+    tbody.innerHTML = data.map(w => `
+      <tr>
+        <td><code>${escapeHtml(w.url)}</code></td>
+        <td>${(w.events || ["*"]).join(", ")}</td>
+        <td><span class="status-badge status-approved">活跃</span></td>
+        <td>
+          <button class="btn btn-ghost btn-sm" style="color: var(--status-error);" onclick="deleteWebhook('${w.id}')">
+            删除
+          </button>
+        </td>
+      </tr>
+    `).join("");
+  } catch (e) {
+    console.error("Webhook 加载失败:", e);
+  }
 }
 
-async function createWebhook() {
-  const url = document.getElementById("wh-url").value.trim();
-  const events = document.getElementById("wh-events").value.trim().split(",").map(s => s.trim()).filter(Boolean);
-  if (!url) { showToast("请输入 Webhook URL", "error"); return; }
+function showCreateWebhook() {
+  const body = `
+    <form id="webhook-form" onsubmit="handleCreateWebhook(event)">
+      <div class="form-group">
+        <label class="form-label">Webhook URL *</label>
+        <input type="url" class="form-input" name="url" placeholder="https://example.com/webhook" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">订阅事件</label>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+            <input type="checkbox" name="events" value="release.created" checked> 创建
+          </label>
+          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+            <input type="checkbox" name="events" value="release.approved" checked> 审批
+          </label>
+          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+            <input type="checkbox" name="events" value="release.deployed" checked> 部署
+          </label>
+          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+            <input type="checkbox" name="events" value="release.rejected"> 拒绝
+          </label>
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+        <button type="button" class="btn btn-ghost" onclick="closeModal()">取消</button>
+        <button type="submit" class="btn btn-primary">创建订阅</button>
+      </div>
+    </form>
+  `;
+  showModal("新增 Webhook 订阅", body);
+}
+
+async function handleCreateWebhook(e) {
+  e.preventDefault();
+  const form = e.target;
+  const formData = new FormData(form);
+  
+  const events = formData.getAll("events");
+  
   try {
     await apiFetch("/api/webhooks", {
       method: "POST",
-      body: JSON.stringify({ url, events: events.length ? events : ["*"] })
+      body: JSON.stringify({
+        url: formData.get("url"),
+        events: events.length > 0 ? events : ["*"]
+      })
     });
     showToast("Webhook 订阅创建成功", "success");
-    document.getElementById("wh-url").value = "";
-    document.getElementById("wh-events").value = "";
+    closeModal();
     loadWebhooks();
-  } catch {}
+  } catch (e) {
+    console.error("创建 Webhook 失败:", e);
+  }
 }
 
 async function deleteWebhook(id) {
+  if (!confirm("确定删除此 Webhook 订阅？")) return;
+  
   try {
     await apiFetch(`/api/webhooks/${id}`, { method: "DELETE" });
-    showToast("Webhook 订阅已删除", "success");
+    showToast("Webhook 已删除", "success");
     loadWebhooks();
-  } catch {}
+  } catch (e) {
+    console.error("删除 Webhook 失败:", e);
+  }
 }
 
 /* ═══════════ 治理策略 ═══════════ */
 async function loadPolicy() {
   try {
     const { data } = await apiFetch("/api/policy");
+    
     const container = document.getElementById("policy-content");
     container.innerHTML = `
-      <table class="policy-table">
-        <tr><th>配置项</th><th>值</th></tr>
-        <tr><td>支持环境</td><td>${data.environments.join(", ")}</td></tr>
-        <tr><td>发布状态</td><td>${data.releaseStatuses.join(", ")}</td></tr>
-        <tr><td>审批状态</td><td>${data.approvalStatuses.join(", ")}</td></tr>
-        <tr><td>服务层级</td><td>${data.serviceTiers.map(t => `${t.code}: ${t.description}`).join("<br>")}</td></tr>
-        <tr><td>风险等级</td><td>${data.riskBands.map(b => `${b.code} (${b.minScore}-${b.maxScore})`).join(", ")}</td></tr>
-        <tr><td>客户影响分范围</td><td>${data.controlScoreBounds.customerImpactScore.min} - ${data.controlScoreBounds.customerImpactScore.max}</td></tr>
-        <tr><td>数据敏感度分范围</td><td>${data.controlScoreBounds.dataSensitivityScore.min} - ${data.controlScoreBounds.dataSensitivityScore.max}</td></tr>
-      </table>
-      <h4 style="margin:20px 0 10px;font-size:0.9rem;font-weight:700">审批路由规则</h4>
-      <table class="policy-table">
-        <tr><th>团队</th><th>适用条件</th><th>SLA（小时）</th></tr>
-        ${data.approvalRouting.map(r => `<tr>
-          <td><strong>${escapeHtml(r.team)}</strong></td>
-          <td>${escapeHtml(r.appliesWhen)}</td>
-          <td style="font-family:var(--font-mono)">${JSON.stringify(r.slaHours)}</td>
-        </tr>`).join("")}
-      </table>`;
-  } catch {}
-}
-
-/* ═══════════ 工具函数 ═══════════ */
-function escapeHtml(str) {
-  if (str == null) return "";
-  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
-function statusLabel(status) {
-  const labels = {
-    draft: "草稿", pending_approval: "待审批", approved: "已批准",
-    rejected: "已拒绝", scheduled: "已排期", deployed: "已部署", rolled_back: "已回滚"
-  };
-  return labels[status] || status;
-}
-
-function riskLabel(band) {
-  const labels = { low: "低", medium: "中", high: "高", critical: "严重" };
-  return labels[band] || band;
-}
-
-function formatTime(isoStr) {
-  if (!isoStr) return "—";
-  try {
-    const d = new Date(isoStr);
-    return d.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
-  } catch {
-    return isoStr;
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+        <div style="padding: 20px; background: var(--bg-raised); border-radius: 12px;">
+          <h3 style="font-size: 1rem; margin-bottom: 12px;">风险等级</h3>
+          ${(data.riskBands || []).map(b => `
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-subtle);">
+              <span class="risk-${b.code}">${b.code.toUpperCase()}</span>
+              <span>${b.minScore}-${b.maxScore}</span>
+            </div>
+          `).join("")}
+        </div>
+        <div style="padding: 20px; background: var(--bg-raised); border-radius: 12px;">
+          <h3 style="font-size: 1rem; margin-bottom: 12px;">服务层级</h3>
+          ${(data.serviceTiers || []).map(t => `
+            <div style="padding: 8px 0; border-bottom: 1px solid var(--border-subtle);">
+              <div style="font-weight: 600;">${t.code}</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">${t.description}</div>
+            </div>
+          `).join("")}
+        </div>
+        <div style="padding: 20px; background: var(--bg-raised); border-radius: 12px;">
+          <h3 style="font-size: 1rem; margin-bottom: 12px;">审批路由</h3>
+          ${(data.approvalRouting || []).map(r => `
+            <div style="padding: 8px 0; border-bottom: 1px solid var(--border-subtle);">
+              <div style="font-weight: 600;">${r.team}</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">${r.appliesWhen}</div>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    console.error("治理策略加载失败:", e);
   }
 }
-
-function showToast(message, type = "info") {
-  const rack = document.getElementById("toast-rack");
-  const toast = document.createElement("div");
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-  rack.appendChild(toast);
-  setTimeout(() => {
-    toast.classList.add("out");
-    setTimeout(() => toast.remove(), 300);
-  }, 4000);
-}
-
-/* ═══════════ 实时刷新 ═══════════ */
-let refreshInterval = null;
-const REFRESH_INTERVAL = 30000; // 30 秒
-
-function startAutoRefresh() {
-  stopAutoRefresh();
-  refreshInterval = setInterval(() => {
-    if (currentView === "dashboard") {
-      loadDashboard();
-    }
-  }, REFRESH_INTERVAL);
-}
-
-function stopAutoRefresh() {
-  if (refreshInterval) {
-    clearInterval(refreshInterval);
-    refreshInterval = null;
-  }
-}
-
-// 页面可见性变化时暂停/恢复刷新
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) {
-    stopAutoRefresh();
-  } else {
-    startAutoRefresh();
-    refreshCurrentView();
-  }
-});
-
-/* ═══════════ 主题切换 ═══════════ */
-const THEME_KEY = "rg-theme";
-
-function initTheme() {
-  const saved = localStorage.getItem(THEME_KEY) || "dark";
-  applyTheme(saved);
-}
-
-function applyTheme(theme) {
-  document.documentElement.setAttribute("data-theme", theme);
-  localStorage.setItem(THEME_KEY, theme);
-}
-
-function toggleTheme() {
-  const current = document.documentElement.getAttribute("data-theme") || "dark";
-  const next = current === "dark" ? "light" : "dark";
-  applyTheme(next);
-  showToast(`已切换到${next === "dark" ? "深色" : "浅色"}主题`, "info");
-}
-
-/* ═══════════ 键盘快捷键 ═══════════ */
-document.addEventListener("keydown", (e) => {
-  // Ctrl/Cmd + K 打开搜索
-  if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-    e.preventDefault();
-    const searchInput = document.getElementById("search-input");
-    if (searchInput) searchInput.focus();
-  }
-  
-  // ESC 关闭模态框
-  if (e.key === "Escape") {
-    const modal = document.getElementById("detail-modal");
-    if (modal && modal.open) modal.close();
-  }
-  
-  // 数字键切换视图
-  if (e.altKey && e.key >= "1" && e.key <= "6") {
-    e.preventDefault();
-    const views = ["dashboard", "releases", "create", "escalations", "webhooks", "policy"];
-    const idx = parseInt(e.key) - 1;
-    if (views[idx]) switchView(views[idx]);
-  }
-});
-
-/* ═══════════ 页面加载完成后初始化 ═══════════ */
-document.addEventListener("DOMContentLoaded", () => {
-  initTheme();
-  startAutoRefresh();
-});
-
 
 /* ═══════════ WebSocket 实时推送 ═══════════ */
-let ws = null;
-let wsReconnectTimer = null;
-let wsReconnectAttempts = 0;
-const WS_MAX_RECONNECT = 5;
-
 function initWebSocket() {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const wsUrl = `${protocol}//${window.location.host}/ws`;
@@ -653,9 +668,8 @@ function initWebSocket() {
     ws.onopen = () => {
       console.log("[WS] 已连接");
       wsReconnectAttempts = 0;
-      updateConnectionStatus("ws-connected");
+      updateWSStatus("connected");
       
-      // 订阅事件
       ws.send(JSON.stringify({
         type: "subscribe",
         events: ["release.created", "release.approved", "release.rejected", "release.deployed"]
@@ -673,7 +687,7 @@ function initWebSocket() {
     
     ws.onclose = () => {
       console.log("[WS] 连接断开");
-      updateConnectionStatus("ws-disconnected");
+      updateWSStatus("disconnected");
       scheduleReconnect();
     };
     
@@ -711,7 +725,6 @@ function handleWSMessage(data) {
   if (data.type === "event") {
     const { event, data: payload } = data;
     
-    // 显示通知
     const messages = {
       "release.created": `新发布创建: ${payload.application} v${payload.version}`,
       "release.approved": `发布审批通过: ${payload.application}`,
@@ -722,42 +735,73 @@ function handleWSMessage(data) {
     const message = messages[event] || `事件: ${event}`;
     showToast(message, event.includes("rejected") ? "warning" : "success");
     
-    // 刷新当前视图
     refreshCurrentView();
   }
 }
 
-function updateConnectionStatus(status) {
+function updateWSStatus(status) {
   const indicator = document.getElementById("ws-status");
   if (indicator) {
     indicator.className = `ws-status ${status}`;
-    indicator.title = status === "ws-connected" ? "WebSocket 已连接" : "WebSocket 未连接";
+    indicator.title = status === "connected" ? "WebSocket 已连接" : "WebSocket 未连接";
   }
 }
 
-/* ═══════════ 键盘快捷键增强 ═══════════ */
+/* ═══════════ Toast 通知 ═══════════ */
+function showToast(message, type = "info") {
+  const container = document.getElementById("toast-container");
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+  
+  const icons = {
+    success: `<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="var(--status-ok)" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+    warning: `<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="var(--status-warn)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+    error: `<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="var(--status-error)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`,
+    info: `<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="var(--status-info)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`
+  };
+  
+  toast.innerHTML = `
+    ${icons[type] || icons.info}
+    <div class="toast-content">
+      <div class="toast-message">${escapeHtml(message)}</div>
+    </div>
+  `;
+  
+  container.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.classList.add("toast-out");
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
+
+/* ═══════════ 键盘快捷键 ═══════════ */
 document.addEventListener("keydown", (e) => {
-  // Ctrl/Cmd + K 聚焦搜索
   if ((e.ctrlKey || e.metaKey) && e.key === "k") {
     e.preventDefault();
     document.getElementById("search-input")?.focus();
   }
   
-  // Escape 关闭模态框
   if (e.key === "Escape") {
-    document.getElementById("detail-modal")?.close();
-  }
-  
-  // 数字键切换视图
-  if (e.altKey && ["1", "2", "3", "4", "5", "6"].includes(e.key)) {
-    e.preventDefault();
-    const views = ["dashboard", "releases", "create", "escalations", "webhooks", "policy"];
-    const viewIndex = parseInt(e.key) - 1;
-    if (views[viewIndex]) {
-      switchView(views[viewIndex]);
-    }
+    closeModal();
   }
 });
 
-/* ═══════════ 自动刷新 ═══════════ */
-let autoRefreshInterval = null;
+/* ═══════════ 工具函数 ═══════════ */
+function escapeHtml(str) {
+  if (typeof str !== "string") return str;
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function formatDate(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleDateString("zh-CN", { 
+    month: "2-digit", 
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}

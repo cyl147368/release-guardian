@@ -3,51 +3,50 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Release Guardian — 发布治理控制台</title>
+  <title>Release Guardian — 量子发布治理</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
 </head>
 <body>
-  <!-- 加载遮罩 -->
+  <!-- 量子初始化序列 -->
   <div class="boot-screen" id="boot-screen">
     <div class="boot-content">
       <div class="boot-logo">
-        <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-          <path d="M32 4L8 16v16c0 14.4 10.24 27.84 24 32 13.76-4.16 24-17.6 24-32V16L32 4z" stroke="#6366f1" stroke-width="3" fill="none"/>
-          <path d="M32 12L14 22v10c0 10.4 7.68 20.48 18 24 10.32-3.52 18-13.6 18-24V22L32 12z" fill="url(#shield-grad)" opacity="0.3"/>
-          <path d="M24 32l6 6 12-12" stroke="#6366f1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-          <defs>
-            <linearGradient id="shield-grad" x1="14" y1="12" x2="50" y2="46">
-              <stop stop-color="#6366f1"/>
-              <stop offset="1" stop-color="#8b5cf6"/>
-            </linearGradient>
-          </defs>
+        <div class="boot-ring"></div>
+        <div class="boot-ring"></div>
+        <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
+          <path d="M32 4L8 16v16c0 14.4 10.24 27.84 24 32 13.76-4.16 24-17.6 24-32V16L32 4z" stroke="var(--quantum-primary)" stroke-width="2.5" fill="none"/>
+          <path d="M32 12L14 22v10c0 10.4 7.68 20.48 18 24 10.32-3.52 18-13.6 18-24V22L32 12z" fill="var(--quantum-subtle)"/>
+          <path d="M24 32l6 6 12-12" stroke="var(--quantum-tertiary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
       <h1 class="boot-title">Release Guardian</h1>
-      <p class="boot-sub">发布治理控制台 · 初始化中</p>
+      <p class="boot-sub">量子发布治理系统 · 初始化</p>
       <div class="boot-progress">
         <div class="boot-progress-bar"></div>
       </div>
+      <div class="boot-status">正在加载核心模块...</div>
     </div>
   </div>
 
-  <!-- 主界面 -->
-  <div class="app-shell" id="app-shell" style="opacity:0">
-    <!-- 侧边栏 -->
+  <!-- 主应用壳 -->
+  <div class="app-shell" id="app-shell">
+    <!-- 导航矩阵 -->
     <nav class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="brand">
-          <svg width="28" height="28" viewBox="0 0 64 64" fill="none">
-            <path d="M32 4L8 16v16c0 14.4 10.24 27.84 24 32 13.76-4.16 24-17.6 24-32V16L32 4z" stroke="var(--accent)" stroke-width="3" fill="none"/>
-            <path d="M24 32l6 6 12-12" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <div class="brand-icon">
+            <svg viewBox="0 0 64 64" fill="none">
+              <path d="M32 4L8 16v16c0 14.4 10.24 27.84 24 32 13.76-4.16 24-17.6 24-32V16L32 4z" stroke="var(--quantum-primary)" stroke-width="2" fill="none"/>
+              <path d="M24 32l6 6 12-12" stroke="var(--quantum-tertiary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
           <div class="brand-text">
             <span class="brand-name">Release Guardian</span>
-            <span class="brand-ver" id="version-tag">v2.4.0</span>
+            <span class="brand-version" id="version-tag">v3.1.0</span>
           </div>
         </div>
         <button class="sidebar-close" id="sidebar-close" aria-label="关闭侧边栏">
@@ -56,49 +55,52 @@
       </div>
 
       <div class="sidebar-nav">
-        <div class="nav-section-label">概览</div>
-        <ul class="nav-list">
-          <li class="nav-item active" data-view="dashboard">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-            <span>仪表板</span>
-          </li>
-          <li class="nav-item" data-view="releases">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-            <span>发布列表</span>
-          </li>
-          <li class="nav-item" data-view="create">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-            <span>创建发布</span>
-          </li>
-        </ul>
+        <div class="nav-section">
+          <div class="nav-section-label">概览</div>
+          <ul class="nav-list">
+            <li class="nav-item active" data-view="dashboard">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+              <span>仪表板</span>
+            </li>
+            <li class="nav-item" data-view="releases">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+              <span>发布列表</span>
+            </li>
+            <li class="nav-item" data-view="create">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+              <span>创建发布</span>
+            </li>
+          </ul>
+        </div>
 
-        <div class="nav-section-label">运维</div>
-        <ul class="nav-list">
-          <li class="nav-item" data-view="escalations">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            <span>升级告警</span>
-            <span class="nav-badge" id="escalation-badge" style="display:none">0</span>
-          </li>
-          <li class="nav-item" data-view="webhooks">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-            <span>Webhook</span>
-          </li>
-          <li class="nav-item" data-view="policy">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            <span>治理策略</span>
-          </li>
-        </ul>
+        <div class="nav-section">
+          <div class="nav-section-label">运维</div>
+          <ul class="nav-list">
+            <li class="nav-item" data-view="escalations">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span>升级告警</span>
+              <span class="nav-badge" id="escalation-badge" style="display:none">0</span>
+            </li>
+            <li class="nav-item" data-view="webhooks">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+              <span>Webhook</span>
+            </li>
+            <li class="nav-item" data-view="policy">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span>治理策略</span>
+            </li>
+          </ul>
+        </div>
       </div>
 
       <div class="sidebar-footer">
         <div class="health-indicator" id="health-indicator">
-          <div class="pulse-ring"></div>
           <span class="health-dot"></span>
           <span class="health-text">检查中…</span>
         </div>
         <div class="sidebar-meta">
           <span class="meta-item" id="request-id-display"></span>
-          <span class="ws-status" id="ws-status" title="WebSocket 未连接">●</span>
+          <span class="ws-status" id="ws-status" title="WebSocket 未连接"></span>
         </div>
       </div>
     </nav>
@@ -107,300 +109,262 @@
     <main class="main-content">
       <header class="topbar">
         <div class="topbar-left">
-          <button class="icon-btn mobile-only" id="menu-toggle" aria-label="打开菜单">
+          <button class="menu-toggle" id="menu-toggle" aria-label="打开菜单">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </button>
-          <h1 class="page-title" id="page-title">仪表板</h1>
-          <span class="page-subtitle" id="page-subtitle">系统总览</span>
+          <div class="page-header">
+            <h1 class="page-title" id="page-title">仪表板</h1>
+            <span class="page-subtitle" id="page-subtitle">系统总览</span>
+          </div>
         </div>
         <div class="topbar-right">
-          <div class="search-box">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" id="search-input" placeholder="搜索发布…" autocomplete="off">
+          <div class="search-container">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" class="search-input" id="search-input" placeholder="搜索发布…" autocomplete="off">
+            <span class="search-shortcut">⌘K</span>
           </div>
-          <button class="icon-btn" id="theme-toggle" aria-label="切换主题" onclick="toggleTheme()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-          </button>
-          <button class="icon-btn" id="refresh-btn" aria-label="刷新">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
-          </button>
+          <div class="topbar-actions">
+            <button class="btn btn-ghost" id="refresh-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+              <span>刷新</span>
+            </button>
+          </div>
         </div>
       </header>
 
-      <div class="content-area" id="content-area">
-        <!-- ═══════════ 仪表板 ═══════════ -->
+      <div class="views-container" id="views-container">
+        <!-- ═══════════ 仪表板视图 ═══════════ -->
         <section class="view active" id="view-dashboard">
-          <div class="kpi-row">
+          <div class="kpi-grid">
             <div class="kpi-card">
               <div class="kpi-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
               </div>
-              <div class="kpi-body">
-                <div class="kpi-value" id="stat-total">—</div>
-                <div class="kpi-label">发布总数</div>
+              <div class="kpi-value" id="stat-total">—</div>
+              <div class="kpi-label">发布总数</div>
+              <div class="kpi-trend up">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
+                +12%
               </div>
             </div>
-            <div class="kpi-card accent">
-              <div class="kpi-icon">
+            <div class="kpi-card">
+              <div class="kpi-icon" style="background: var(--status-warn-bg); color: var(--status-warn);">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               </div>
-              <div class="kpi-body">
-                <div class="kpi-value" id="stat-pending">—</div>
-                <div class="kpi-label">待审批</div>
-              </div>
+              <div class="kpi-value" id="stat-pending">—</div>
+              <div class="kpi-label">待审批</div>
             </div>
-            <div class="kpi-card success">
-              <div class="kpi-icon">
+            <div class="kpi-card">
+              <div class="kpi-icon" style="background: var(--status-ok-bg); color: var(--status-ok);">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
               </div>
-              <div class="kpi-body">
-                <div class="kpi-value" id="stat-deployed">—</div>
-                <div class="kpi-label">已部署</div>
-              </div>
+              <div class="kpi-value" id="stat-deployed">—</div>
+              <div class="kpi-label">已部署</div>
             </div>
-            <div class="kpi-card danger">
-              <div class="kpi-icon">
+            <div class="kpi-card">
+              <div class="kpi-icon" style="background: var(--status-error-bg); color: var(--status-error);">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               </div>
-              <div class="kpi-body">
-                <div class="kpi-value" id="stat-sla-breaches">—</div>
-                <div class="kpi-label">SLA 违规</div>
-              </div>
+              <div class="kpi-value" id="stat-sla-breaches">—</div>
+              <div class="kpi-label">SLA 违规</div>
             </div>
           </div>
 
-          <div class="grid-2col">
-            <div class="panel">
-              <div class="panel-header">
-                <h3>风险分布</h3>
-              </div>
-              <div class="panel-body">
-                <div class="chart-container" id="risk-chart"></div>
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">风险分布</div>
+                <div class="card-description">当前发布风险等级统计</div>
               </div>
             </div>
-            <div class="panel">
-              <div class="panel-header">
-                <h3>环境分布</h3>
-              </div>
-              <div class="panel-body">
-                <div class="chart-container" id="env-chart"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="panel">
-            <div class="panel-header">
-              <h3>状态分布</h3>
-            </div>
-            <div class="panel-body">
-              <div class="chart-container horizontal" id="status-chart"></div>
+            <div id="risk-chart" style="height: 200px; display: flex; align-items: flex-end; gap: 8px; padding: 20px 0;">
+              <!-- 动态生成 -->
             </div>
           </div>
         </section>
 
-        <!-- ═══════════ 发布列表 ═══════════ -->
+        <!-- ═══════════ 发布列表视图 ═══════════ -->
         <section class="view" id="view-releases">
-          <div class="toolbar">
-            <div class="filter-group">
-              <select id="filter-env" class="select-field">
-                <option value="">全部环境</option>
-                <option value="development">开发</option>
-                <option value="staging">预发布</option>
-                <option value="production">生产</option>
-              </select>
-              <select id="filter-status" class="select-field">
-                <option value="">全部状态</option>
-                <option value="draft">草稿</option>
-                <option value="pending_approval">待审批</option>
-                <option value="approved">已批准</option>
-                <option value="rejected">已拒绝</option>
-                <option value="scheduled">已排期</option>
-                <option value="deployed">已部署</option>
-                <option value="rolled_back">已回滚</option>
-              </select>
-              <select id="filter-risk" class="select-field">
-                <option value="">全部风险</option>
-                <option value="low">低</option>
-                <option value="medium">中</option>
-                <option value="high">高</option>
-                <option value="critical">严重</option>
-              </select>
-              <button class="btn btn-outline" onclick="loadReleases()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
-                刷新
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">发布记录</div>
+              <button class="btn btn-primary" onclick="switchView('create')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                新建发布
               </button>
             </div>
+            <div class="data-table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>应用</th>
+                    <th>版本</th>
+                    <th>环境</th>
+                    <th>风险</th>
+                    <th>状态</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="releases-tbody">
+                  <!-- 动态生成 -->
+                </tbody>
+              </table>
+            </div>
+            <div class="pagination" id="releases-pagination"></div>
           </div>
-
-          <div class="table-wrapper">
-            <table class="data-table" id="releases-table">
-              <thead>
-                <tr>
-                  <th>应用</th>
-                  <th>版本</th>
-                  <th>环境</th>
-                  <th>状态</th>
-                  <th>风险</th>
-                  <th>负责人</th>
-                  <th>创建时间</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody id="releases-tbody"></tbody>
-            </table>
-          </div>
-
-          <div class="pagination" id="pagination"></div>
         </section>
 
-        <!-- ═══════════ 创建发布 ═══════════ -->
+        <!-- ═══════════ 创建发布视图 ═══════════ -->
         <section class="view" id="view-create">
-          <div class="panel">
-            <div class="panel-header">
-              <h3>新建发布请求</h3>
-              <span class="panel-desc">填写以下信息提交发布审批</span>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">创建发布请求</div>
             </div>
-            <div class="panel-body">
-              <form id="create-form" class="form-grid">
-                <div class="form-field">
-                  <label for="f-application">应用名称 <span class="required">*</span></label>
-                  <input type="text" id="f-application" required placeholder="my-service">
+            <form id="create-form">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="form-group">
+                  <label class="form-label">应用名称 *</label>
+                  <input type="text" class="form-input" name="application" placeholder="例如: payment-service" required>
                 </div>
-                <div class="form-field">
-                  <label for="f-version">版本号 <span class="required">*</span></label>
-                  <input type="text" id="f-version" required placeholder="2026.06.18">
+                <div class="form-group">
+                  <label class="form-label">版本号 *</label>
+                  <input type="text" class="form-input" name="version" placeholder="例如: 2.1.0" required>
                 </div>
-                <div class="form-field">
-                  <label for="f-environment">目标环境 <span class="required">*</span></label>
-                  <select id="f-environment" required>
-                    <option value="development">开发</option>
-                    <option value="staging">预发布</option>
-                    <option value="production">生产</option>
+                <div class="form-group">
+                  <label class="form-label">目标环境 *</label>
+                  <select class="form-select" name="environment" required>
+                    <option value="">选择环境</option>
+                    <option value="development">开发环境</option>
+                    <option value="staging">预发布环境</option>
+                    <option value="production">生产环境</option>
                   </select>
                 </div>
-                <div class="form-field">
-                  <label for="f-serviceTier">服务层级 <span class="required">*</span></label>
-                  <select id="f-serviceTier" required>
-                    <option value="tier_3">Tier 3 — 一般</option>
-                    <option value="tier_2">Tier 2 — 重要</option>
-                    <option value="tier_1">Tier 1 — 关键</option>
+                <div class="form-group">
+                  <label class="form-label">服务层级 *</label>
+                  <select class="form-select" name="serviceTier" required>
+                    <option value="">选择层级</option>
+                    <option value="tier_1">Tier 1 - 核心服务</option>
+                    <option value="tier_2">Tier 2 - 重要服务</option>
+                    <option value="tier_3">Tier 3 - 一般服务</option>
                   </select>
                 </div>
-                <div class="form-field">
-                  <label for="f-changeCategory">变更类别 <span class="required">*</span></label>
-                  <select id="f-changeCategory" required>
-                    <option value="standard">标准</option>
-                    <option value="normal">普通</option>
-                    <option value="emergency">紧急</option>
+                <div class="form-group">
+                  <label class="form-label">变更类型 *</label>
+                  <select class="form-select" name="changeCategory" required>
+                    <option value="">选择类型</option>
+                    <option value="standard">标准变更</option>
+                    <option value="emergency">紧急变更</option>
+                    <option value="maintenance">维护变更</option>
                   </select>
                 </div>
-                <div class="form-field">
-                  <label for="f-owner">负责人 <span class="required">*</span></label>
-                  <input type="text" id="f-owner" required placeholder="alice">
+                <div class="form-group">
+                  <label class="form-label">负责人 *</label>
+                  <input type="text" class="form-input" name="owner" placeholder="负责人姓名" required>
                 </div>
-                <div class="form-field">
-                  <label for="f-plannedStartAt">计划开始时间 <span class="required">*</span></label>
-                  <input type="datetime-local" id="f-plannedStartAt" required>
+                <div class="form-group">
+                  <label class="form-label">计划开始时间 *</label>
+                  <input type="datetime-local" class="form-input" name="plannedStartAt" required>
                 </div>
-                <div class="form-field">
-                  <label for="f-plannedEndAt">计划结束时间 <span class="required">*</span></label>
-                  <input type="datetime-local" id="f-plannedEndAt" required>
+                <div class="form-group">
+                  <label class="form-label">计划结束时间 *</label>
+                  <input type="datetime-local" class="form-input" name="plannedEndAt" required>
                 </div>
-                <div class="form-field full-width">
-                  <label for="f-summary">发布摘要 <span class="required">*</span></label>
-                  <textarea id="f-summary" required rows="3" placeholder="描述本次发布的内容和目的"></textarea>
-                </div>
-                <div class="form-field full-width">
-                  <label for="f-components">组件 <span class="required">*</span></label>
-                  <input type="text" id="f-components" required placeholder="api, worker, scheduler（逗号分隔）">
-                </div>
-
-                <div class="form-section full-width">
-                  <h4 class="section-title">控制项检查</h4>
-                  <div class="checkbox-grid">
-                    <label class="check-item"><input type="checkbox" id="f-automatedTestsPassed"><span class="check-mark"></span>自动化测试通过</label>
-                    <label class="check-item"><input type="checkbox" id="f-rollbackReady"><span class="check-mark"></span>回滚就绪</label>
-                    <label class="check-item"><input type="checkbox" id="f-monitoringReady"><span class="check-mark"></span>监控就绪</label>
-                    <label class="check-item"><input type="checkbox" id="f-securityReviewed"><span class="check-mark"></span>安全审查完成</label>
-                  </div>
-                </div>
-
-                <div class="form-field">
-                  <label for="f-customerImpactScore">客户影响分 <span class="range-hint">0-5</span></label>
-                  <input type="number" id="f-customerImpactScore" min="0" max="5" value="0">
-                </div>
-                <div class="form-field">
-                  <label for="f-dataSensitivityScore">数据敏感度分 <span class="range-hint">0-5</span></label>
-                  <input type="number" id="f-dataSensitivityScore" min="0" max="5" value="0">
-                </div>
-
-                <div class="form-actions full-width">
-                  <button type="reset" class="btn btn-ghost">重置</button>
-                  <button type="submit" class="btn btn-primary">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    提交发布请求
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-
-          <div class="panel result-panel" id="create-result" style="display:none">
-            <div class="panel-header">
-              <h3>创建结果</h3>
-            </div>
-            <div class="panel-body">
-              <pre class="code-block" id="create-result-content"></pre>
-            </div>
-          </div>
-        </section>
-
-        <!-- ═══════════ 升级告警 ═══════════ -->
-        <section class="view" id="view-escalations">
-          <div class="panel">
-            <div class="panel-header">
-              <h3>运营升级摘要</h3>
-              <button class="btn btn-outline btn-sm" onclick="loadEscalations()">刷新</button>
-            </div>
-            <div class="panel-body" id="escalations-content">
-              <div class="loading-state">加载中…</div>
-            </div>
-          </div>
-        </section>
-
-        <!-- ═══════════ Webhook ═══════════ -->
-        <section class="view" id="view-webhooks">
-          <div class="panel">
-            <div class="panel-header">
-              <h3>Webhook 订阅</h3>
-            </div>
-            <div class="panel-body">
-              <div class="inline-form">
-                <input type="url" id="wh-url" placeholder="https://example.com/webhook" class="input-field flex-1">
-                <input type="text" id="wh-events" placeholder="事件类型（* 或逗号分隔）" class="input-field flex-1">
-                <button class="btn btn-primary" onclick="createWebhook()">添加订阅</button>
               </div>
-              <div id="webhooks-list" class="mt-4"></div>
-            </div>
+              <div class="form-group">
+                <label class="form-label">发布摘要 *</label>
+                <textarea class="form-textarea" name="summary" placeholder="描述本次发布的变更内容" required></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">组件列表 *</label>
+                <input type="text" class="form-input" name="components" placeholder="逗号分隔，例如: api, web, worker" required>
+                <div class="form-help">多个组件用逗号分隔</div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="form-group">
+                  <label class="form-label">客户影响评分 (0-5)</label>
+                  <input type="number" class="form-input" name="customerImpactScore" min="0" max="5" value="0">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">数据敏感度评分 (0-5)</label>
+                  <input type="number" class="form-input" name="dataSensitivityScore" min="0" max="5" value="0">
+                </div>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                  <input type="checkbox" name="automatedTestsPassed" checked>
+                  <span>自动化测试通过</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                  <input type="checkbox" name="rollbackReady" checked>
+                  <span>回滚方案就绪</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                  <input type="checkbox" name="monitoringReady" checked>
+                  <span>监控就绪</span>
+                </label>
+              </div>
+              <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button type="button" class="btn btn-ghost" onclick="switchView('releases')">取消</button>
+                <button type="submit" class="btn btn-primary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  提交发布请求
+                </button>
+              </div>
+            </form>
           </div>
-          <div class="panel">
-            <div class="panel-header">
-              <h3>事件日志</h3>
+        </section>
+
+        <!-- ═══════════ 升级告警视图 ═══════════ -->
+        <section class="view" id="view-escalations">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">升级告警</div>
+              <div class="card-description">高风险待审批和 SLA 违规监控</div>
             </div>
-            <div class="panel-body" id="webhook-events">
-              <div class="loading-state">加载中…</div>
+            <div id="escalations-list">
+              <!-- 动态生成 -->
             </div>
           </div>
         </section>
 
-        <!-- ═══════════ 治理策略 ═══════════ -->
-        <section class="view" id="view-policy">
-          <div class="panel">
-            <div class="panel-header">
-              <h3>治理策略配置</h3>
+        <!-- ═══════════ Webhook 视图 ═══════════ -->
+        <section class="view" id="view-webhooks">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Webhook 管理</div>
+              <button class="btn btn-primary" onclick="showCreateWebhook()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                新增订阅
+              </button>
             </div>
-            <div class="panel-body" id="policy-content">
-              <div class="loading-state">加载中…</div>
+            <div class="data-table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>URL</th>
+                    <th>事件</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="webhooks-tbody">
+                  <!-- 动态生成 -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ═══════════ 治理策略视图 ═══════════ -->
+        <section class="view" id="view-policy">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">治理策略</div>
+              <div class="card-description">审批路由与风险规则配置</div>
+            </div>
+            <div id="policy-content">
+              <!-- 动态生成 -->
             </div>
           </div>
         </section>
@@ -408,22 +372,23 @@
     </main>
   </div>
 
-  <!-- Toast 容器 -->
-  <div class="toast-rack" id="toast-rack"></div>
-
-  <!-- 详情模态 -->
-  <dialog class="modal" id="detail-modal">
-    <div class="modal-backdrop"></div>
-    <div class="modal-card">
+  <!-- 模态框 -->
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal" id="detail-modal">
       <div class="modal-header">
-        <h3 id="modal-title">详情</h3>
-        <button class="icon-btn" id="modal-close" aria-label="关闭">
+        <h2 class="modal-title" id="modal-title">详情</h2>
+        <button class="modal-close" id="modal-close" aria-label="关闭">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
-      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-body" id="modal-body">
+        <!-- 动态内容 -->
+      </div>
     </div>
-  </dialog>
+  </div>
+
+  <!-- Toast 容器 -->
+  <div class="toast-container" id="toast-container"></div>
 
   <script src="/js/app.js"></script>
 </body>
