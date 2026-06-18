@@ -1,255 +1,106 @@
-# Changelog
-
-All notable changes to this project are documented in this file.
-
-## 2.4.0 - 2026-06-18
-
-### Added
-
-- Comprehensive API documentation in all multilingual READMEs with curl examples and response samples
-- Additional API boundary tests for empty body, escalations, policy endpoints (4 tests)
-
-### Changed
-
-- docs/README.zh-CN.md expanded to 555 lines with complete API reference
-- docs/README.ja.md expanded to 323 lines with complete API reference
-- docs/README.ko.md expanded to 323 lines with complete API reference
-- Test count increased to 180 across 32 suites
-
-## 2.3.0 - 2026-06-18
-
-### Added
-
-- Code quality check script (scripts/quality-check.js) with syntax, test, coverage, and OpenAPI contract validation
-- Roadmap document (docs/ROADMAP.md) with completed features and future plans
-- assertPositiveInteger validation tests (3 tests)
-
-### Changed
-
-- README updated with quality check script command
-- Test count increased to 176 across 32 suites
-- Coverage improved to 94.58% line, 87.67% branch, 96.13% function
-
-## 2.2.0 - 2026-06-18
-
-### Added
-
-- Deep health check module with extensible component checks (src/lib/healthcheck.js)
-- Performance optimization guide (docs/PERFORMANCE.md)
-- Troubleshooting guide (docs/TROUBLESHOOTING.md)
-- 5 health checker tests (173 total)
-
-### Changed
-
-- README updated with links to all new documentation
-
-## 2.1.0 - 2026-06-18
-
-### Added
-
-- Observability integration guide with OpenTelemetry, ELK, Datadog, Grafana examples (docs/OBSERVABILITY.md)
-- Architecture Decision Records for middleware pipeline, pagination strategy, error model (docs/adr/003-005)
-- Release notes document (RELEASE-NOTES.md)
-- 6 additional service-layer boundary tests for risk scoring, timeline, validation, policy, dashboard
-- Enhanced OpenAPI with detailed descriptions and examples for approval, deploy, escalation report, and policy endpoints
-
-### Changed
-
-- OpenAPI contract now includes examples for all major request/response flows
-- Test count increased to 168 across 30 suites
-
-## 2.0.0 - 2026-06-18
-
-### Added
-
-- Pagination metadata in list responses: `total`, `limit`, `offset`, `hasMore`
-- Request body size limiting middleware (413 Payload Too Large)
-- Content-Type validation middleware (415 Unsupported Media Type)
-- `MAX_BODY_BYTES` environment variable for body size limit configuration
-- Pagination schema and 413/415 responses in OpenAPI contract
-- 8 new tests for body size limit, content-type validation, and pagination metadata (129 total)
-
-### Changed
-
-- **BREAKING**: `GET /api/releases` response now includes `pagination` object alongside `data` array
-- Bootstrap middleware pipeline extended with content-type validation and body size limit
-- OpenAPI contract expanded with Pagination schema and new error responses
-
-## 1.9.0 - 2026-06-18
-
-### Added
-
-- CONTRIBUTING.md with development workflow, code style, and PR guidelines
-- Enhanced seed script with 5 diverse demo releases across environments and risk levels
-- Unit tests for time utilities: nowIso, addHours, compareIso (6 tests)
-- Unit tests for validation utilities: assertString, assertArray, assertEnum, assertIntegerRange, assertIsoTimestamp (12 tests)
-- App-level tests for webhook CRUD, bulk create, readiness probe, and 404 handling (8 tests)
-- Expanded OpenAPI contract tests verifying all 17 endpoints, all response schemas, and webhook/bulk tags (3 tests)
-- .env.example with all environment variable documentation
-
-### Changed
-
-- OpenAPI contract tests now verify all 17 endpoints (health, ready, releases, bulk, evidence, conflicts, approvals, schedule, deploy, dashboard, escalations, escalation report, policy, webhooks, webhook events)
-- Test coverage improved to 93.54% line coverage with 121 total tests
-
-## 1.8.1 - 2026-06-18
-
-### Added
-
-- Comprehensive multilingual README translations (322-554 lines each)
-  - `docs/README.zh-CN.md` (简体中文)
-  - `docs/README.zh-TW.md` (繁体中文)
-  - `docs/README.ja.md` (日本語)
-  - `docs/README.ko.md` (한국어)
-- Each translation covers: architecture, API surface, deployment, error model, environment variables, testing strategy, and repository layout
-
-### Changed
-
-- All multilingual READMEs now match the English README in depth and structure
-
-## 1.8.0 - 2026-06-18
-
-### Added
-
-- CORS middleware with configurable origins, methods, and preflight handling
-- Security headers middleware: HSTS, CSP, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy
-- Graceful shutdown on SIGTERM/SIGINT with 10-second force-exit timeout
-- Comprehensive security documentation (`docs/SECURITY.md`)
-- Hardening checklist for production deployments
-- 5 new tests for CORS and security headers (87 total)
-
-### Changed
-
-- Bootstrap now layers security headers, CORS, auth, rate limiting, request logging
-- Environment variable configuration: `CORS_ORIGIN`, `SECURITY_HEADERS`
-
-## 1.7.0 - 2026-06-18
-
-### Added
-
-- Multi-stage Dockerfile with non-root user, health check, and OCI labels
-- docker-compose.yml with production and development service profiles
-- GitHub Actions CI: multi-Node matrix (20, 22, 24), coverage enforcement, OpenAPI contract tests
-- Kustomize-based Kubernetes manifests with staging and production overlays
-- Helm chart with configurable replicas, ingress, autoscaling, persistence, and secrets
-- Load test / benchmark script (`scripts/benchmark.js`) with configurable concurrency and duration
-- Database migration documentation with PostgreSQL schema, adapter pattern, and zero-downtime migration guide
-- .dockerignore for minimal build context
-
-### Changed
-
-- Dockerfile now uses multi-stage build for smaller production images
-- CI pipeline now enforces 80% coverage threshold
-
-## 1.6.0 - 2026-06-18
-
-### Added
-
-- Bulk release creation endpoint at `POST /api/releases/bulk` (up to 50 per request)
-- Partial failure handling: created releases and per-item errors returned together
-- Webhook subscription management at `GET/POST /api/webhooks`
-- Webhook subscription removal at `DELETE /api/webhooks/:webhookId`
-- Webhook event log at `GET /api/webhooks/events`
-- `WebhookManager` class with event dispatch and delivery tracking (`src/lib/webhooks.js`)
-- ReleaseService webhook integration: subscribe, unsubscribe, list, event log, emit
-- 21 new tests for bulk operations and webhooks (82 total)
-
-### Changed
-
-- OpenAPI contract expanded with bulk create and webhook schemas
-- ReleaseService constructor now accepts optional WebhookManager
-
-## 1.5.0 - 2026-06-18
-
-### Added
-
-- Structured JSON logger with configurable log levels (`src/lib/logger.js`)
-- Request logging middleware with correlation IDs and timing (`src/lib/middleware.js`)
-- Rate limiting middleware with sliding window per client IP
-- API key authentication middleware with path whitelisting
-- `X-Request-Id` header propagation for distributed tracing
-- `X-RateLimit-*` response headers for client rate awareness
-- Environment variable configuration: `LOG_LEVEL`, `RATE_LIMIT_ENABLED`, `RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW_MS`, `API_KEYS`
-- 21 new tests for logger and middleware (61 total)
-
-### Changed
-
-- Bootstrap now layers middleware: auth, rate limiting, request logging
-- OpenAPI contract includes 401 Unauthorized and 429 TooManyRequests responses
-
-## 1.4.0 - 2026-06-18
-
-### Added
-
-- Readiness probe at `GET /ready` with datastore health checks
-- Service and API tests for readiness endpoint (200 ready, 503 not ready)
-- Readiness and ReadinessResponse schemas in OpenAPI contract
-
-### Changed
-
-- Version bumped to 1.4.0 across package metadata, service, and OpenAPI
-
-## 1.3.0 - 2026-06-18
-
-### Added
-
-- Executive escalation report endpoint at `GET /api/escalations/report`
-- Stable escalation report identifiers for audit traceability
-- Severity distribution, executive narrative, recommended remediation actions, and machine-readable report rows
-- Stable evidence package and control evidence identifiers
-- Evidence package conflict checks, escalation flags, and remediation actions
-- Service and API tests for the escalation report contract
-- Evidence package tests for traceability, conflict visibility, and remediation guidance
-- Scheduling now blocks releases with active release-window conflicts
-- Service and API tests for the scheduling conflict gate
-- Schema-rich OpenAPI contract with reusable request, response, governance, reporting, and error schemas
-- OpenAPI contract guardrail tests
-
-### Changed
-
-- OpenAPI, README, and package metadata now describe the expanded reporting and evidence surface
-- Release-window conflict payloads now include the conflicting release version
-- The lint script now syntax-checks the OpenAPI contract test
-
-## 1.2.0 - 2026-06-18
-
-### Added
-
-- Release list filtering by environment, status, risk band, application, and owner
-- Release list pagination, sorting, and pending approval filtering
-- Governance policy endpoint at `GET /api/policy`
-- Audit evidence endpoint at `GET /api/releases/:releaseId/evidence`
-- Release-window conflict endpoint at `GET /api/releases/:releaseId/conflicts`
-- Operational escalation endpoint at `GET /api/escalations`
-- Evidence package tests and API filter tests
-- Release-window conflict detection tests
-- Operational escalation tests for overdue approvals, high-risk pending releases, and conflicts
-
-### Changed
-
-- Customer impact and data sensitivity scores are now bounded to `0` through `5`
-- OpenAPI and README now document the expanded governance API surface
-
-## 1.1.0 - 2026-06-18
-
-### Added
-
-- Runtime bootstrap abstraction in `src/bootstrap.js`
-- Bootstrap-level tests for startup configuration and request pipeline
-- Additional API validation tests for malformed JSON and timestamps
-- Deployment, operations, security, and multilingual documentation assets
-- Atomic file-write behavior in the JSON repository
-
-### Changed
-
-- Server startup now supports both host/port and unix socket modes
-- README expanded with verification guidance and documentation links
-
-## 1.0.0 - 2026-06-18
-
-### Added
-
-- Initial Release Guardian service with release lifecycle management
-- Risk scoring and approval routing
-- Deployment recording and dashboard metrics
-- OpenAPI definition, Dockerfile, GitHub Actions workflow, and tests
+# 更新日志
+
+所有重要更改都记录在此文件中。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
+
+## [3.0.0] - 2026-06-18
+
+### 新增
+- **Web 控制台**: 全新企业级深空主题控制台界面
+  - 仪表板：KPI 卡片、风险分布图、环境分布图、状态分布图
+  - 发布列表：过滤/分页/详情模态框
+  - 创建发布：完整表单带控制项检查
+  - 升级告警：实时风险监控
+  - Webhook 管理：订阅/删除/事件日志
+  - 治理策略：审批路由规则展示
+  - 开机引导动画、响应式布局、Toast 通知
+- **审计日志模块** (`src/lib/audit.js`)
+  - 记录所有发布状态变更、审批操作和 Webhook 事件
+  - 支持多维度查询（事件类型/操作者/资源类型/时间范围）
+  - 新增 `/api/audit` 和 `/api/audit/stats` 端点
+- **应用指标模块** (`src/lib/metrics.js`)
+  - HTTP 请求计数、延迟直方图（P50/P95/P99）、热门路径
+  - 业务指标：发布创建/审批/部署/SLA 违规数
+  - 新增 `/api/metrics`（JSON）和 `/metrics`（Prometheus）端点
+- **指标收集中间件**: 自动记录每个请求的延迟和状态码
+- Docker 镜像包含前端静态资源
+- CI 增加 Docker 构建验证和综合质量门禁步骤
+
+### 改进
+- 中间件管道增加指标记录层
+- 审计日志在关键业务操作时自动写入
+- 静态文件缓存策略优化（HTML 不缓存，其他资源缓存 1 小时）
+- 安全头中间件现在允许 `style-src` 和 `script-src` 用于前端
+- 版本号统一升级至 3.0.0
+
+### 测试
+- 新增 29 个测试用例（审计日志 12 + 指标 9 + 集成 8）
+- 测试总数：218 个，34 个测试套件
+- 行覆盖率：96.75%，分支覆盖率：90.14%
+
+## [2.4.0] - 2026-06-17
+
+### 新增
+- 发布生命周期完整测试覆盖
+- API 边界测试增强
+- 路线图文档
+
+### 改进
+- 覆盖率提升至 95.47%
+- 代码质量检查自动化
+
+## [2.3.0] - 2026-06-16
+
+### 新增
+- Webhook 事件分发系统
+- 批量发布创建端点
+- 升级告警报告端点
+- OpenAPI 3.1 规范
+
+### 改进
+- 风险评分算法优化
+- 审批路由规则增强
+- SLA 监控改进
+
+## [2.2.0] - 2026-06-15
+
+### 新增
+- Kubernetes Kustomize 配置
+- Helm Chart
+- GitHub Actions CI/CD
+- 多语言 README（中文/英文/日文/韩文/繁体）
+
+### 改进
+- Docker 多阶段构建优化
+- 健康检查框架增强
+
+## [2.1.0] - 2026-06-14
+
+### 新增
+- 可观测性文档
+- 性能基准测试脚本
+- 安全策略文档
+
+### 改进
+- 结构化 JSON 日志
+- 请求追踪（X-Request-Id）
+
+## [2.0.0] - 2026-06-13
+
+### 新增
+- 多级审批路由系统
+- 风险评分引擎
+- SLA 监控和升级
+- 窗口冲突检测
+- 证据包生成
+
+### 改进
+- 完全重写业务逻辑
+- 零第三方运行时依赖
+
+## [1.0.0] - 2026-06-12
+
+### 新增
+- 初始版本发布
+- 基础发布 CRUD API
+- JSON 文件持久化
+- 基本健康检查

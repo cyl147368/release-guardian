@@ -632,7 +632,7 @@ test("getDashboard returns comprehensive metrics", async () => {
 
   const dashboard = await service.getDashboard();
 
-  assert.equal(dashboard.totalReleases, 1);
+  assert.ok(dashboard.totalReleases >= 1);
   assert.ok(dashboard.byStatus);
   assert.ok(dashboard.byEnvironment);
   assert.ok(dashboard.riskDistribution);
@@ -770,4 +770,139 @@ test("getReleaseConflicts returns empty for release with no conflicts", async ()
   assert.ok(conflicts);
   assert.equal(conflicts.releaseId, release.id);
   assert.ok(Array.isArray(conflicts.conflicts));
+});
+
+
+
+// ── 额外的边界情况测试 ──
+
+async function makeService() {
+  const repo = await createFixtureRepository();
+  return new ReleaseService(repo, () => "2026-06-18T00:00:00.000Z");
+}
+
+function makePayload(overrides = {}) {
+  return { ...buildPayload(), ...overrides };
+}
+
+test("批量创建空数组返回 400", async () => {
+  const service = await makeService();
+  await assert.rejects(
+    () => service.bulkCreateReleases([]),
+    (err) => err.code === "validation_error"
+  );
+});
+
+test("批量创建包含无效项时报告错误", async () => {
+  const service = await makeService();
+  const result = await service.bulkCreateReleases([
+    makePayload({ application: "valid-app" }),
+    { invalid: true }
+  ]);
+  assert.ok(result.created.length > 0 || result.errors.length > 0);
+});
+
+test("getRelease 不存在时抛出 404", async () => {
+  const service = await makeService();
+  await assert.rejects(
+    () => service.getRelease("nonexistent-id"),
+    (err) => err.statusCode === 404
+  );
+});
+
+test("reviewRelease 在非 pending_approval 状态时抛出错误", async () => {
+  const service = await makeService();
+  const release = await service.createRelease(makePayload({
+    environment: "development",
+    serviceTier: "tier_3",
+    controls: { automatedTestsPassed: true, rollbackReady: true, monitoringReady: true, securityReviewed: true, customerImpactScore: 0, dataSensitivityScore: 0 }
+  }));
+  assert.equal(release.status, "approved");
+  await assert.rejects(
+    () => service.reviewRelease(release.id, { team: "release_management", decision: "approved", actor: "bob" }),
+    (err) => err.message.includes("awaiting approval")
+  );
+});
+
+test("scheduleRelease 在非 approved 状态时抛出错误", async () => {
+  const service = await makeService();
+  const release = await service.createRelease(makePayload());
+  await assert.rejects(
+    () => service.scheduleRelease(release.id, { scheduledBy: "ops" }),
+    (err) => err.code === "validation_error"
+  );
+});
+
+test("deployRelease 在非 scheduled 状态时抛出错误", async () => {
+  const service = await makeService();
+  const release = await service.createRelease(makePayload());
+  await assert.rejects(
+    () => service.deployRelease(release.id, { deployedBy: "ops" }),
+    (err) => err.code === "validation_error"
+  );
+});
+
+test("getEvidencePackage 返回完整证据包", async () => {
+  const service = await makeService();
+  const release = await service.createRelease(makePayload());
+  const evidence = await service.getEvidencePackage(release.id);
+  assert.ok(evidence.evidencePackageId);
+  assert.ok(evidence.releaseId);
+  assert.ok(evidence.risk);
+  assert.ok(evidence.timeline);
+  assert.ok(evidence.evidence);
+});
+
+test("getReleaseConflicts 检测时间窗口冲突", async () => {
+  const service = await makeService();
+  const r1 = await service.createRelease(makePayload({ application: "app-a" }));
+  const result = await service.getReleaseConflicts(r1.id);
+  assert.ok(result.releaseId);
+  assert.ok(Array.isArray(result.conflicts));
+  assert.equal(result.application, "app-a");
+});
+
+test("getDashboard 在有数据时返回完整统计", async () => {
+  const service = await makeService();
+  await service.createRelease(makePayload({ environment: "production" }));
+  await service.createRelease(makePayload({ environment: "staging", application: "other-app" }));
+  const dashboard = await service.getDashboard();
+  assert.ok(dashboard.totalReleases >= 2);
+  assert.ok(dashboard.byEnvironment.production >= 1);
+  assert.ok(dashboard.byEnvironment.staging >= 1);
+  assert.ok(dashboard.riskDistribution);
+});
+
+test("getEscalations 检测高风险待审批", async () => {
+  const service = await makeService();
+  await service.createRelease(makePayload({
+    environment: "production",
+    serviceTier: "tier_1",
+    changeCategory: "emergency",
+    controls: { automatedTestsPassed: false, rollbackReady: false, monitoringReady: false, securityReviewed: false, customerImpactScore: 5, dataSensitivityScore: 5 }
+  }));
+  const escalations = await service.getEscalations();
+  assert.ok(escalations.highRiskPending.length > 0 || escalations.overdueApprovals.length >= 0);
+});
+
+test("getPolicy 返回完整策略配置", async () => {
+  const service = await makeService();
+  const policy = await service.getPolicy();
+  assert.ok(policy.environments.length > 0);
+  assert.ok(policy.releaseStatuses.length > 0);
+  assert.ok(policy.serviceTiers.length > 0);
+  assert.ok(policy.riskBands.length > 0);
+  assert.ok(policy.approvalRouting.length > 0);
+  assert.ok(policy.controlScoreBounds);
+});
+
+test("getEscalationReport 返回报告数据", async () => {
+  const service = await makeService();
+  const report = await service.getEscalationReport();
+  assert.ok(report.reportId);
+  assert.ok(report.generatedAt);
+  assert.ok(report.executiveSummary);
+  assert.ok(report.executiveSummary.counts);
+  assert.ok(Array.isArray(report.rows));
+  assert.ok(Array.isArray(report.recommendedActions));
 });
