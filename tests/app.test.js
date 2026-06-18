@@ -477,3 +477,40 @@ test("POST /api/webhooks without url returns 400", async () => {
   const response = await app(buildRequest("POST", "/api/webhooks", { events: ["*"] }));
   assert.equal(response.statusCode, 400);
 });
+
+// 额外的 API 边界测试
+test("POST /api/releases with empty body returns 400", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("POST", "/api/releases", {}));
+  assert.equal(response.statusCode, 400);
+  const body = JSON.parse(response.body);
+  assert.equal(body.error.code, "validation_error");
+});
+
+test("GET /api/escalations returns structured data", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("GET", "/api/escalations"));
+  assert.equal(response.statusCode, 200);
+  const body = JSON.parse(response.body);
+  assert.ok(body.data);
+  assert.ok(Array.isArray(body.data.overdueApprovals));
+});
+
+test("GET /api/escalations/report returns report data", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("GET", "/api/escalations/report"));
+  assert.equal(response.statusCode, 200);
+  const body = JSON.parse(response.body);
+  assert.ok(body.data);
+  assert.ok(body.data.reportId);
+});
+
+test("GET /api/policy returns policy data", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("GET", "/api/policy"));
+  assert.equal(response.statusCode, 200);
+  const body = JSON.parse(response.body);
+  assert.ok(body.data);
+  assert.ok(Array.isArray(body.data.environments));
+  assert.ok(Array.isArray(body.data.serviceTiers));
+});
