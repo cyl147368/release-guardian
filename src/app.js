@@ -124,8 +124,8 @@ export function createApp(service, { auditLog = null, metrics = null } = {}) {
       if (request.method === "POST" && approvalMatch) {
         const body = await readJsonBody(request);
         const release = await service.reviewRelease(approvalMatch[1], body);
-        const event = body.status === "approved" ? "release.approved" : "release.rejected";
-        if (auditLog) auditLog.record(event, { actor: body.approver || "system", resourceType: "release", resourceId: approvalMatch[1], details: { team: body.team, status: body.status } });
+        const event = body.decision === "approved" ? "release.approved" : "release.rejected";
+        if (auditLog) auditLog.record(event, { actor: body.actor || "system", resourceType: "release", resourceId: approvalMatch[1], details: { team: body.team, status: body.status } });
         return jsonResponse(200, { data: release });
       }
 

@@ -514,3 +514,122 @@ test("GET /api/policy returns policy data", async () => {
   assert.ok(Array.isArray(body.data.environments));
   assert.ok(Array.isArray(body.data.serviceTiers));
 });
+
+// ── 审计日志和指标端点测试 ──
+import { createAuditLog } from "../src/lib/audit.js";
+import { createMetrics } from "../src/lib/metrics.js";
+
+async function createFixtureAppWithExtras() {
+  const directory = await mkdtemp(join(tmpdir(), "release-guardian-extras-"));
+  const filePath = join(directory, "seed.json");
+  const seed = await readFile(new URL("../data/seed.json", import.meta.url), "utf8");
+  await writeFile(filePath, seed, "utf8");
+
+  const service = new ReleaseService(
+    new Repository(filePath),
+    () => "2026-06-18T00:00:00.000Z"
+  );
+  const auditLog = createAuditLog();
+  const metrics = createMetrics();
+  const app = createApp(service, { auditLog, metrics });
+  return { app, auditLog, metrics };
+}
+
+test("GET /api/metrics 返回指标快照", async () => {
+  const { app } = await createFixtureAppWithExtras();
+  const response = await app(buildRequest("GET", "/api/metrics"));
+  assert.equal(response.statusCode, 200);
+  const body = JSON.parse(response.body);
+  assert.ok(body.data);
+  assert.ok(body.data.uptime);
+  assert.ok(body.data.http);
+  assert.ok(body.data.business);
+});
+
+test("GET /metrics 返回 Prometheus 格式指标", async () => {
+  const { app } = await createFixtureAppWithExtras();
+  const response = await app(buildRequest("GET", "/metrics"));
+  assert.equal(response.statusCode, 200);
+  assert.ok(response.headers["content-type"].includes("text/plain"));
+  assert.ok(response.body.includes("rg_uptime_seconds"));
+  assert.ok(response.body.includes("rg_http_requests_total"));
+});
+
+test("GET /api/audit 返回审计日志", async () => {
+  const { app, auditLog } = await createFixtureAppWithExtras();
+  auditLog.record("release.created", { actor: "alice", resourceId: "r-001" });
+  auditLog.record("release.approved", { actor: "bob", resourceId: "r-001" });
+
+  const response = await app(buildRequest("GET", "/api/audit"));
+  assert.equal(response.statusCode, 200);
+  const body = JSON.parse(response.body);
+  assert.equal(body.data.length, 2);
+  assert.equal(body.pagination.total, 2);
+});
+
+test("GET /api/audit 支持查询参数过滤", async () => {
+  const { app, auditLog } = await createFixtureAppWithExtras();
+  auditLog.record("release.created", { actor: "alice" });
+  auditLog.record("release.approved", { actor: "bob" });
+
+  const response = await app(buildRequest("GET", "/api/audit?event=release.created"));
+  assert.equal(response.statusCode, 200);
+  const body = JSON.parse(response.body);
+  assert.equal(body.data.length, 1);
+});
+
+test("GET /api/audit/stats 返回统计信息", async () => {
+  const { app, auditLog } = await createFixtureAppWithExtras();
+  auditLog.record("release.created");
+  auditLog.record("release.created");
+  auditLog.record("release.approved");
+
+  const response = await app(buildRequest("GET", "/api/audit/stats"));
+  assert.equal(response.statusCode, 200);
+  const body = JSON.parse(response.body);
+  assert.equal(body.data.totalEntries, 3);
+  assert.equal(body.data.byEvent["release.created"], 2);
+});
+
+test("审计日志在发布创建时自动记录", async () => {
+  const { app, auditLog } = await createFixtureAppWithExtras();
+  const payload = createPayload();
+  await app(buildRequest("POST", "/api/releases", payload));
+
+  const result = auditLog.query({ event: "release.created" });
+  assert.equal(result.total, 1);
+  assert.equal(result.items[0].actor, "carol");
+});
+
+test("审计日志在审批操作时自动记录", async () => {
+  const { app, auditLog } = await createFixtureAppWithExtras();
+
+  // 创建一个高风险发布以进入 pending_approval 状态
+  const payload = createPayload();
+  payload.environment = "production";
+  payload.serviceTier = "tier_1";
+  payload.changeCategory = "emergency";
+  payload.controls.automatedTestsPassed = false;
+  payload.controls.rollbackReady = false;
+  payload.controls.monitoringReady = false;
+  payload.controls.securityReviewed = false;
+  payload.controls.customerImpactScore = 5;
+  payload.controls.dataSensitivityScore = 5;
+  const createRes = await app(buildRequest("POST", "/api/releases", payload));
+  const created = JSON.parse(createRes.body);
+
+  // 找到待审批的团队并审批
+  const pendingApproval = created.data.approvals?.find(a => a.status === "pending");
+  assert.ok(pendingApproval, "应存在待审批项");
+
+  await app(buildRequest("POST", `/api/releases/${created.data.id}/approvals`, {
+    team: pendingApproval.team,
+    decision: "approved",
+    actor: "bob",
+    comment: "LGTM"
+  }));
+
+  const result = auditLog.query({ event: "release.approved" });
+  assert.equal(result.total, 1);
+  assert.equal(result.items[0].actor, "bob");
+});
