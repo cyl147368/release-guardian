@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Release Guardian API
-  version: 1.5.0
+  version: 1.6.0
   description: Enterprise-grade release governance and audit API.
 servers:
   - url: http://localhost:3000
@@ -10,6 +10,7 @@ tags:
   - name: Releases
   - name: Governance
   - name: Reporting
+  - name: Webhooks
 paths:
   /health:
     get:
@@ -99,6 +100,38 @@ paths:
                 $ref: "#/components/schemas/ReleaseResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+  /api/releases/bulk:
+    post:
+      tags: [Releases]
+      summary: Bulk create releases
+      description: Creates multiple releases in a single transactional request. Supports up to 50 items. Partial failures return created releases alongside per-item errors.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                releases:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items:
+                    $ref: "#/components/schemas/CreateReleaseRequest"
+              required: [releases]
+      responses:
+        "201":
+          description: Bulk creation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkCreateResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
   /api/releases/{releaseId}:
     get:
       tags: [Releases]
@@ -265,6 +298,83 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PolicyResponse"
+  /api/webhooks:
+    get:
+      tags: [Webhooks]
+      summary: List webhook subscriptions
+      responses:
+        "200":
+          description: Webhook subscription list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [Webhooks]
+      summary: Create a webhook subscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWebhookRequest"
+      responses:
+        "201":
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/webhooks/{webhookId}:
+    delete:
+      tags: [Webhooks]
+      summary: Remove a webhook subscription
+      parameters:
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Subscription removed
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/webhooks/events:
+    get:
+      tags: [Webhooks]
+      summary: List webhook event log
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Webhook event log
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookEventLogResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 components:
   parameters:
     ReleaseId:
@@ -445,7 +555,84 @@ components:
           format: date-time
         summary:
           type: string
-        components:
+          /api/webhooks:
+    get:
+      tags: [Webhooks]
+      summary: List webhook subscriptions
+      responses:
+        "200":
+          description: Webhook subscription list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [Webhooks]
+      summary: Create a webhook subscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWebhookRequest"
+      responses:
+        "201":
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/webhooks/{webhookId}:
+    delete:
+      tags: [Webhooks]
+      summary: Remove a webhook subscription
+      parameters:
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Subscription removed
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/webhooks/events:
+    get:
+      tags: [Webhooks]
+      summary: List webhook event log
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Webhook event log
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookEventLogResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+components:
           type: array
           minItems: 1
           items:
@@ -557,7 +744,84 @@ components:
           format: date-time
         summary:
           type: string
-        components:
+          /api/webhooks:
+    get:
+      tags: [Webhooks]
+      summary: List webhook subscriptions
+      responses:
+        "200":
+          description: Webhook subscription list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [Webhooks]
+      summary: Create a webhook subscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWebhookRequest"
+      responses:
+        "201":
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/webhooks/{webhookId}:
+    delete:
+      tags: [Webhooks]
+      summary: Remove a webhook subscription
+      parameters:
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Subscription removed
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/webhooks/events:
+    get:
+      tags: [Webhooks]
+      summary: List webhook event log
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Webhook event log
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookEventLogResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+components:
           type: array
           items:
             type: string
@@ -1025,6 +1289,113 @@ components:
           properties:
             data:
               $ref: "#/components/schemas/EscalationReport"
+    BulkCreateResult:
+      type: object
+      required: [created, failed, releases, errors]
+      properties:
+        created:
+          type: integer
+        failed:
+          type: integer
+        releases:
+          type: array
+          items:
+            $ref: "#/components/schemas/Release"
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+              code:
+                type: string
+              message:
+                type: string
+    BulkCreateResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/BulkCreateResult"
+    WebhookSubscription:
+      type: object
+      required: [id, url, events, active, createdAt]
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+          format: uri
+        events:
+          type: array
+          items:
+            type: string
+        secret:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+    CreateWebhookRequest:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+        events:
+          type: array
+          items:
+            type: string
+          default: ["*"]
+        secret:
+          type: string
+    WebhookResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/WebhookSubscription"
+    WebhookListResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/WebhookSubscription"
+    WebhookEvent:
+      type: object
+      required: [eventId, type, timestamp, payload]
+      properties:
+        eventId:
+          type: string
+        type:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        payload:
+          type: object
+        deliveries:
+          type: array
+          items:
+            type: object
+    WebhookEventLogResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/WebhookEvent"
     Readiness:
       type: object
       required: [status, generatedAt, version, checks]

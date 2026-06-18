@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 
 import { HttpError } from "../lib/http.js";
+import { WebhookManager } from "../lib/webhooks.js";
 import { addHours, compareIso, nowIso } from "../lib/time.js";
 import {
   assertArray,
@@ -21,12 +22,13 @@ const RELEASE_STATUS = [
   "rolled_back"
 ];
 const APPROVAL_STATUS = ["pending", "approved", "rejected"];
-const SERVICE_VERSION = "1.5.0";
+const SERVICE_VERSION = "1.6.0";
 
 export class ReleaseService {
-  constructor(repository, clock = nowIso) {
+  constructor(repository, clock = nowIso, webhookManager = null) {
     this.repository = repository;
     this.clock = clock;
+    this.webhooks = webhookManager || new WebhookManager({ clock });
   }
 
   async listReleases(filters = {}) {
@@ -133,6 +135,87 @@ export class ReleaseService {
     db.releases.push(release);
     await this.repository.save(db);
     return release;
+  }
+
+  async bulkCreateReleases(inputs) {
+    if (!Array.isArray(inputs) || inputs.length === 0) {
+      throw new HttpError(400, "validation_error", "Request must contain a non-empty array of release inputs.");
+    }
+    if (inputs.length > 50) {
+      throw new HttpError(400, "validation_error", "Bulk create supports at most 50 releases per request.");
+    }
+
+    const db = await this.repository.load();
+    const timestamp = this.clock();
+    const results = [];
+    const errors = [];
+
+    for (let i = 0; i < inputs.length; i++) {
+      try {
+        validateReleaseInput(inputs[i]);
+        const input = inputs[i];
+        const risk = calculateRisk(input);
+        const needsManualApproval = risk.score >= 70;
+        const approvalTargets = buildApprovalTargets(
+          risk,
+          db.teams,
+          input.serviceTier,
+          timestamp,
+          needsManualApproval
+        );
+        const conflicts = findReleaseConflicts(db.releases, input);
+
+        const release = {
+          id: randomUUID(),
+          application: input.application.trim(),
+          version: input.version.trim(),
+          environment: input.environment,
+          serviceTier: input.serviceTier,
+          changeCategory: input.changeCategory,
+          plannedStartAt: input.plannedStartAt,
+          plannedEndAt: input.plannedEndAt,
+          summary: input.summary.trim(),
+          components: input.components.map((item) => item.trim()),
+          controls: normalizeControls(input.controls),
+          conflicts,
+          owner: input.owner.trim(),
+          status: needsManualApproval ? "pending_approval" : "approved",
+          risk,
+          approvals: approvalTargets,
+          deployment: null,
+          timeline: [
+            {
+              at: timestamp,
+              type: "release_created",
+              actor: input.owner.trim(),
+              detail: "Release request created via bulk operation."
+            }
+          ],
+          createdAt: timestamp,
+          updatedAt: timestamp
+        };
+
+        db.releases.push(release);
+        results.push(release);
+      } catch (error) {
+        errors.push({
+          index: i,
+          code: error.code || "validation_error",
+          message: error.message
+        });
+      }
+    }
+
+    if (results.length > 0) {
+      await this.repository.save(db);
+    }
+
+    return {
+      created: results.length,
+      failed: errors.length,
+      releases: results,
+      errors
+    };
   }
 
   async getReleaseConflicts(releaseId) {
@@ -489,6 +572,35 @@ export class ReleaseService {
       changeFailureRate,
       averageLeadHours
     };
+  }
+
+  subscribeWebhook({ url, events, secret }) {
+    if (!url || typeof url !== "string") {
+      throw new HttpError(400, "validation_error", "Webhook url is required and must be a string.");
+    }
+    return this.webhooks.subscribe({ url, events, secret });
+  }
+
+  unsubscribeWebhook(id) {
+    const removed = this.webhooks.unsubscribe(id);
+    if (!removed) {
+      throw new HttpError(404, "not_found", `Webhook subscription ${id} was not found.`);
+    }
+    return true;
+  }
+
+  listWebhookSubscriptions() {
+    return this.webhooks.listSubscriptions();
+  }
+
+  getWebhookEventLog(filters = {}) {
+    const limit = Math.min(Math.max(Number(filters.limit) || 50, 1), 100);
+    const offset = Math.max(Number(filters.offset) || 0, 0);
+    return this.webhooks.getEventLog({ limit, offset });
+  }
+
+  async emitWebhookEvent(eventType, payload) {
+    return this.webhooks.dispatchEvent(eventType, payload);
   }
 }
 

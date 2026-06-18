@@ -161,6 +161,29 @@ Risk is calculated from:
 
 Returns a plain-text health response.
 
+### `POST /api/releases/bulk`
+
+Creates multiple releases in a single request (up to 50). Supports partial failure: successfully created releases are returned alongside per-item error details.
+
+```bash
+curl -X POST http://localhost:3000/api/releases/bulk \
+  -H "Content-Type: application/json" \
+  -d '{
+    "releases": [
+      { "application": "app-a", "version": "1.0.0", ... },
+      { "application": "app-b", "version": "2.0.0", ... }
+    ]
+  }'
+```
+
+Response fields:
+
+- `created`: number of successfully created releases
+- `failed`: number of items that failed validation
+- `releases`: array of created release objects
+- `errors`: array of `{ index, code, message }` for failed items
+
+
 ### `GET /ready`
 
 Returns a JSON readiness response. Returns `200` with `status: "ready"` when the service can accept traffic, or `503` with `status: "not_ready"` when the datastore is unhealthy.
@@ -262,6 +285,41 @@ Returns an auditable executive escalation report with:
 ### `GET /api/policy`
 
 Returns the active governance policy, including environments, release statuses, risk bands, approval routing, service tiers, and score bounds.
+
+## 7.1 Webhook API
+
+### `GET /api/webhooks`
+
+Lists all active webhook subscriptions.
+
+### `POST /api/webhooks`
+
+Creates a webhook subscription.
+
+```bash
+curl -X POST http://localhost:3000/api/webhooks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com/release-events",
+    "events": ["release.created", "release.deployed"],
+    "secret": "optional-hmac-secret"
+  }'
+```
+
+Fields:
+
+- `url` (required): target URL for event delivery
+- `events`: array of event types to subscribe to (default: `["*"]` for all)
+- `secret`: optional HMAC secret for signed payloads
+
+### `DELETE /api/webhooks/:webhookId`
+
+Removes a webhook subscription.
+
+### `GET /api/webhooks/events`
+
+Returns the webhook event delivery log with pagination (`limit`, `offset`).
+
 
 ## 8. Error Model
 

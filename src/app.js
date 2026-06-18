@@ -28,6 +28,13 @@ export function createApp(service) {
         return jsonResponse(201, { data: release });
       }
 
+      if (request.method === "POST" && url.pathname === "/api/releases/bulk") {
+        const body = await readJsonBody(request);
+        const result = await service.bulkCreateReleases(body.releases || body);
+        return jsonResponse(201, { data: result });
+      }
+
+
       const releaseMatch = url.pathname.match(/^\/api\/releases\/([^/]+)$/);
       if (request.method === "GET" && releaseMatch) {
         const release = await service.getRelease(releaseMatch[1]);
@@ -85,6 +92,29 @@ export function createApp(service) {
       if (request.method === "GET" && url.pathname === "/api/policy") {
         const policy = await service.getPolicy();
         return jsonResponse(200, { data: policy }, { etag: etagFor(policy) });
+      }
+
+
+      if (request.method === "GET" && url.pathname === "/api/webhooks") {
+        const subs = service.listWebhookSubscriptions();
+        return jsonResponse(200, { data: subs }, { etag: etagFor(subs) });
+      }
+
+      if (request.method === "POST" && url.pathname === "/api/webhooks") {
+        const body = await readJsonBody(request);
+        const sub = service.subscribeWebhook(body);
+        return jsonResponse(201, { data: sub });
+      }
+
+      const webhookMatch = url.pathname.match(/^\/api\/webhooks\/([^/]+)$/);
+      if (request.method === "DELETE" && webhookMatch) {
+        service.unsubscribeWebhook(webhookMatch[1]);
+        return jsonResponse(204, null);
+      }
+
+      if (request.method === "GET" && url.pathname === "/api/webhooks/events") {
+        const events = service.getWebhookEventLog(Object.fromEntries(url.searchParams));
+        return jsonResponse(200, { data: events }, { etag: etagFor(events) });
       }
 
       return jsonResponse(404, {

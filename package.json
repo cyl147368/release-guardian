@@ -1,6 +1,6 @@
 {
   "name": "release-guardian",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Enterprise-grade release governance API with risk scoring, approval orchestration, and audit reporting.",
   "type": "module",
   "main": "src/server.js",
@@ -13,7 +13,7 @@
     "test": "node --test",
     "test:coverage": "node --test --experimental-test-coverage",
     "test:bootstrap": "node --test tests/bootstrap.test.js",
-    "lint": "node --check src/server.js && node --check src/bootstrap.js && node --check src/app.js && node --check src/repository.js && node --check src/services/releaseService.js && node --check src/lib/http.js && node --check src/lib/validation.js && node --check src/lib/time.js && node --check src/lib/logger.js && node --check src/lib/middleware.js && node --check scripts/seed-demo.js && node --check tests/openapi.test.js"
+    "lint": "node --check src/server.js && node --check src/bootstrap.js && node --check src/app.js && node --check src/repository.js && node --check src/services/releaseService.js && node --check src/lib/http.js && node --check src/lib/validation.js && node --check src/lib/time.js && node --check src/lib/logger.js && node --check src/lib/middleware.js && node --check src/lib/webhooks.js && node --check scripts/seed-demo.js && node --check tests/openapi.test.js"
   },
   "keywords": [
     "release",

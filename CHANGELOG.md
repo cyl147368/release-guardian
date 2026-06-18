@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## 1.6.0 - 2026-06-18
+
+### Added
+
+- Bulk release creation endpoint at `POST /api/releases/bulk` (up to 50 per request)
+- Partial failure handling: created releases and per-item errors returned together
+- Webhook subscription management at `GET/POST /api/webhooks`
+- Webhook subscription removal at `DELETE /api/webhooks/:webhookId`
+- Webhook event log at `GET /api/webhooks/events`
+- `WebhookManager` class with event dispatch and delivery tracking (`src/lib/webhooks.js`)
+- ReleaseService webhook integration: subscribe, unsubscribe, list, event log, emit
+- 21 new tests for bulk operations and webhooks (82 total)
+
+### Changed
+
+- OpenAPI contract expanded with bulk create and webhook schemas
+- ReleaseService constructor now accepts optional WebhookManager
+
 ## 1.5.0 - 2026-06-18
 
 ### Added
