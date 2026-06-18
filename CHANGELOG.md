@@ -11,8 +11,10 @@ All notable changes to this project are documented in this file.
 - Governance policy endpoint at `GET /api/policy`
 - Audit evidence endpoint at `GET /api/releases/:releaseId/evidence`
 - Release-window conflict endpoint at `GET /api/releases/:releaseId/conflicts`
+- Operational escalation endpoint at `GET /api/escalations`
 - Evidence package tests and API filter tests
 - Release-window conflict detection tests
+- Operational escalation tests for overdue approvals, high-risk pending releases, and conflicts
 
 ### Changed
 

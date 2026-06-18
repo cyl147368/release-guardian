@@ -170,6 +170,10 @@ Returns governance aggregates:
 - Change failure rate
 - Average lead time in hours
 
+### `GET /api/escalations`
+
+Returns an operational escalation summary for overdue approvals, high-risk pending releases, and release-window conflicts.
+
 ### `GET /api/policy`
 
 Returns the active governance policy, including environments, release statuses, risk bands, approval routing, service tiers, and score bounds.
@@ -328,6 +332,12 @@ curl http://localhost:3000/api/releases/<releaseId>/evidence
 curl http://localhost:3000/api/releases/<releaseId>/conflicts
 ```
 
+### View Operational Escalations
+
+```bash
+curl http://localhost:3000/api/escalations
+```
+
 ## 12. Verification
 
 Recommended local verification sequence:
@@ -353,6 +363,7 @@ The project currently includes:
 - Policy endpoint tests
 - Audit evidence package tests
 - Release-window conflict tests
+- Operational escalation tests
 
 Recommended next-stage additions:
 

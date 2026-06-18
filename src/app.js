@@ -66,6 +66,11 @@ export function createApp(service) {
         return jsonResponse(200, { data: dashboard }, { etag: etagFor(dashboard) });
       }
 
+      if (request.method === "GET" && url.pathname === "/api/escalations") {
+        const escalations = await service.getEscalations();
+        return jsonResponse(200, { data: escalations }, { etag: etagFor(escalations) });
+      }
+
       if (request.method === "GET" && url.pathname === "/api/policy") {
         const policy = await service.getPolicy();
         return jsonResponse(200, { data: policy }, { etag: etagFor(policy) });

@@ -258,6 +258,28 @@ test("getReleaseConflicts returns current overlapping release windows", async ()
   assert.equal(conflicts.conflicts[0].reason, "same application, same environment, overlapping release window");
 });
 
+test("getEscalations summarizes overdue approvals, high-risk pending releases, and conflicts", async () => {
+  const repository = await createFixtureRepository();
+  let currentTime = "2026-06-18T00:00:00.000Z";
+  const service = new ReleaseService(repository, () => currentTime);
+
+  await service.createRelease(buildPayload());
+  await service.createRelease({
+    ...buildPayload(),
+    version: "2026.06.18-overlap",
+    plannedStartAt: "2026-06-20T08:30:00.000Z",
+    plannedEndAt: "2026-06-20T10:00:00.000Z"
+  });
+
+  currentTime = "2026-06-18T10:30:00.000Z";
+  const escalations = await service.getEscalations();
+
+  assert.equal(escalations.counts.overdueApprovals, 6);
+  assert.equal(escalations.counts.highRiskPending, 2);
+  assert.equal(escalations.counts.conflictRisks, 2);
+  assert.equal(escalations.overdueApprovals[0].ageHours, 10.5);
+});
+
 test("getPolicy returns governance rules and score bounds", async () => {
   const repository = await createFixtureRepository();
   const service = new ReleaseService(repository, () => "2026-06-18T00:00:00.000Z");

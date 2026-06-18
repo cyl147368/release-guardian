@@ -150,6 +150,12 @@ paths:
       responses:
         "200":
           description: Dashboard payload
+  /api/escalations:
+    get:
+      summary: Retrieve operational escalation summary
+      responses:
+        "200":
+          description: Escalation summary for overdue approvals, high-risk pending releases, and release-window conflicts
   /api/policy:
     get:
       summary: Retrieve release governance policy

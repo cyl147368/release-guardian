@@ -123,6 +123,75 @@ export class ReleaseService {
     };
   }
 
+  async getEscalations() {
+    const db = await this.repository.load();
+    const currentTime = this.clock();
+    const releases = db.releases.map((release) => refreshApprovalSla(release, currentTime));
+
+    const overdueApprovals = releases.flatMap((release) =>
+      release.approvals
+        .filter((approval) => approval.status === "pending" && approval.slaBreached)
+        .map((approval) => ({
+          releaseId: release.id,
+          application: release.application,
+          version: release.version,
+          environment: release.environment,
+          riskBand: release.risk.band,
+          team: approval.team,
+          displayName: approval.displayName,
+          requestedAt: approval.requestedAt,
+          slaHours: approval.slaHours,
+          ageHours: calculateAgeHours(approval.requestedAt, currentTime),
+          owner: release.owner
+        }))
+    );
+
+    const highRiskPending = releases
+      .filter((release) => release.status === "pending_approval")
+      .filter((release) => ["high", "critical"].includes(release.risk.band))
+      .map((release) => ({
+        releaseId: release.id,
+        application: release.application,
+        version: release.version,
+        environment: release.environment,
+        riskBand: release.risk.band,
+        riskScore: release.risk.score,
+        pendingTeams: release.approvals
+          .filter((approval) => approval.status === "pending")
+          .map((approval) => approval.team),
+        owner: release.owner,
+        plannedStartAt: release.plannedStartAt
+      }));
+
+    const conflictRisks = releases
+      .map((release) => ({
+        release,
+        conflicts: findReleaseConflicts(releases, release, release.id)
+      }))
+      .filter((item) => item.conflicts.length > 0)
+      .map((item) => ({
+        releaseId: item.release.id,
+        application: item.release.application,
+        version: item.release.version,
+        environment: item.release.environment,
+        status: item.release.status,
+        conflictCount: item.conflicts.length,
+        conflicts: item.conflicts
+      }));
+
+    return {
+      generatedAt: currentTime,
+      counts: {
+        overdueApprovals: overdueApprovals.length,
+        highRiskPending: highRiskPending.length,
+        conflictRisks: conflictRisks.length
+      },
+      overdueApprovals,
+      highRiskPending,
+      conflictRisks
+    };
+  }
+
   async reviewRelease(releaseId, input) {
     assertString(input.team, "team");
     assertString(input.actor, "actor");
@@ -436,6 +505,11 @@ function windowsOverlap(leftStart, leftEnd, rightStart, rightEnd) {
   const rightEndTime = new Date(rightEnd).getTime();
 
   return leftStartTime < rightEndTime && rightStartTime < leftEndTime;
+}
+
+function calculateAgeHours(start, end) {
+  const age = (new Date(end).getTime() - new Date(start).getTime()) / (1000 * 60 * 60);
+  return Number(Math.max(age, 0).toFixed(2));
 }
 
 function validateReleaseInput(input) {
