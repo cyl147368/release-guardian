@@ -29,6 +29,10 @@ function initBootSequence() {
     // 数据加载
     checkHealth();
     loadDashboard();
+    // 初始化 WebSocket 实时推送
+    initWebSocket();
+    // 启动自动刷新
+    startAutoRefresh();
   }, 2000);
 }
 
@@ -631,3 +635,129 @@ document.addEventListener("DOMContentLoaded", () => {
   initTheme();
   startAutoRefresh();
 });
+
+
+/* ═══════════ WebSocket 实时推送 ═══════════ */
+let ws = null;
+let wsReconnectTimer = null;
+let wsReconnectAttempts = 0;
+const WS_MAX_RECONNECT = 5;
+
+function initWebSocket() {
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const wsUrl = `${protocol}//${window.location.host}/ws`;
+  
+  try {
+    ws = new WebSocket(wsUrl);
+    
+    ws.onopen = () => {
+      console.log("[WS] 已连接");
+      wsReconnectAttempts = 0;
+      updateConnectionStatus("ws-connected");
+      
+      // 订阅事件
+      ws.send(JSON.stringify({
+        type: "subscribe",
+        events: ["release.created", "release.approved", "release.rejected", "release.deployed"]
+      }));
+    };
+    
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        handleWSMessage(data);
+      } catch (e) {
+        console.warn("[WS] 消息解析失败:", e);
+      }
+    };
+    
+    ws.onclose = () => {
+      console.log("[WS] 连接断开");
+      updateConnectionStatus("ws-disconnected");
+      scheduleReconnect();
+    };
+    
+    ws.onerror = (err) => {
+      console.warn("[WS] 错误:", err);
+    };
+  } catch (e) {
+    console.warn("[WS] 初始化失败:", e);
+    scheduleReconnect();
+  }
+}
+
+function scheduleReconnect() {
+  if (wsReconnectAttempts >= WS_MAX_RECONNECT) {
+    console.log("[WS] 达到最大重连次数");
+    return;
+  }
+  
+  const delay = Math.min(1000 * Math.pow(2, wsReconnectAttempts), 30000);
+  wsReconnectAttempts++;
+  
+  clearTimeout(wsReconnectTimer);
+  wsReconnectTimer = setTimeout(() => {
+    console.log(`[WS] 尝试重连 (${wsReconnectAttempts}/${WS_MAX_RECONNECT})`);
+    initWebSocket();
+  }, delay);
+}
+
+function handleWSMessage(data) {
+  if (data.type === "connected") {
+    console.log("[WS] 客户端 ID:", data.clientId);
+    return;
+  }
+  
+  if (data.type === "event") {
+    const { event, data: payload } = data;
+    
+    // 显示通知
+    const messages = {
+      "release.created": `新发布创建: ${payload.application} v${payload.version}`,
+      "release.approved": `发布审批通过: ${payload.application}`,
+      "release.rejected": `发布审批拒绝: ${payload.application}`,
+      "release.deployed": `发布部署完成: ${payload.application} → ${payload.environment}`
+    };
+    
+    const message = messages[event] || `事件: ${event}`;
+    showToast(message, event.includes("rejected") ? "warning" : "success");
+    
+    // 刷新当前视图
+    refreshCurrentView();
+  }
+}
+
+function updateConnectionStatus(status) {
+  const indicator = document.getElementById("ws-status");
+  if (indicator) {
+    indicator.className = `ws-status ${status}`;
+    indicator.title = status === "ws-connected" ? "WebSocket 已连接" : "WebSocket 未连接";
+  }
+}
+
+/* ═══════════ 键盘快捷键增强 ═══════════ */
+document.addEventListener("keydown", (e) => {
+  // Ctrl/Cmd + K 聚焦搜索
+  if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+    e.preventDefault();
+    document.getElementById("search-input")?.focus();
+  }
+  
+  // Escape 关闭模态框
+  if (e.key === "Escape") {
+    document.getElementById("detail-modal")?.close();
+  }
+  
+  // 数字键切换视图
+  if (e.altKey && ["1", "2", "3", "4", "5", "6"].includes(e.key)) {
+    e.preventDefault();
+    const views = ["dashboard", "releases", "create", "escalations", "webhooks", "policy"];
+    const viewIndex = parseInt(e.key) - 1;
+    if (views[viewIndex]) {
+      switchView(views[viewIndex]);
+    }
+  }
+});
+
+/* ═══════════ 自动刷新 ═══════════ */
+let autoRefreshInterval = null;
