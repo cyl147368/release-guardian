@@ -347,6 +347,23 @@ src/services/...       | 95.1%  | 85.7%    | 100%
 
 ---
 
+## 性能
+
+基准测试结果（Apple Silicon，单线程）：
+
+| 端点 | 吞吐量 (RPS) | P50 延迟 | P95 延迟 | P99 延迟 |
+|------|-------------|----------|----------|----------|
+| GET /health | 158,678 | 0ms | 0.01ms | 0.26ms |
+| GET /ready | 11,518 | 0.06ms | 0.11ms | 1.97ms |
+| POST /api/releases | 726 | 1.22ms | 2.73ms | 4.23ms |
+| GET /api/releases | 325 | 2.87ms | 3.72ms | 10.63ms |
+| GET /api/dashboard | 724 | 1.28ms | 1.92ms | 3.17ms |
+
+运行性能测试：
+```bash
+node scripts/performance-test.js
+```
+
 ## 部署
 
 ### Docker 生产部署
