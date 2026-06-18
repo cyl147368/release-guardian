@@ -212,6 +212,7 @@ paths:
     post:
       tags: [Governance]
       summary: Approve or reject a release
+      description: Applies an approval or rejection decision from a specific team. The decision is recorded in the release timeline with the reviewer's identity and optional comment.
       parameters:
         - $ref: "#/components/parameters/ReleaseId"
       requestBody:
@@ -220,6 +221,10 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/ReviewReleaseRequest"
+            example:
+              team: release_management
+              decision: approved
+              comment: "Reviewed and approved for production deployment."
       responses:
         "200":
           description: Updated release
@@ -263,6 +268,7 @@ paths:
     post:
       tags: [Releases]
       summary: Record deployment outcome
+      description: Records the deployment outcome including status, deployer identity, and optional notes. Updates dashboard metrics and release timeline.
       parameters:
         - $ref: "#/components/parameters/ReleaseId"
       requestBody:
@@ -271,6 +277,10 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/DeployReleaseRequest"
+            example:
+              status: success
+              deployedBy: alice
+              notes: "Deployment completed successfully, no issues observed."
       responses:
         "200":
           description: Deployment result
@@ -312,6 +322,7 @@ paths:
     get:
       tags: [Reporting]
       summary: Retrieve executive escalation report
+      description: Returns an auditable escalation report with stable audit identifiers, severity distribution, executive narrative, recommended remediation actions, and machine-readable report rows.
       responses:
         "200":
           description: Auditable escalation report with executive summary, severity counts, recommended actions, and machine-readable rows
@@ -323,6 +334,7 @@ paths:
     get:
       tags: [Governance]
       summary: Retrieve release governance policy
+      description: Returns the complete governance policy snapshot including supported environments, release statuses, approval statuses, service tiers, risk bands, approval routing rules, and control score bounds.
       responses:
         "200":
           description: Policy payload
