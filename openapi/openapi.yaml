@@ -11,6 +11,8 @@ tags:
   - name: Governance
   - name: Reporting
   - name: Webhooks
+  - name: Audit
+  - name: Metrics
 paths:
   /health:
     get:

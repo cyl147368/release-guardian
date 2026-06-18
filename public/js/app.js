@@ -551,3 +551,83 @@ function showToast(message, type = "info") {
     setTimeout(() => toast.remove(), 300);
   }, 4000);
 }
+
+/* ═══════════ 实时刷新 ═══════════ */
+let refreshInterval = null;
+const REFRESH_INTERVAL = 30000; // 30 秒
+
+function startAutoRefresh() {
+  stopAutoRefresh();
+  refreshInterval = setInterval(() => {
+    if (currentView === "dashboard") {
+      loadDashboard();
+    }
+  }, REFRESH_INTERVAL);
+}
+
+function stopAutoRefresh() {
+  if (refreshInterval) {
+    clearInterval(refreshInterval);
+    refreshInterval = null;
+  }
+}
+
+// 页面可见性变化时暂停/恢复刷新
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    stopAutoRefresh();
+  } else {
+    startAutoRefresh();
+    refreshCurrentView();
+  }
+});
+
+/* ═══════════ 主题切换 ═══════════ */
+const THEME_KEY = "rg-theme";
+
+function initTheme() {
+  const saved = localStorage.getItem(THEME_KEY) || "dark";
+  applyTheme(saved);
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem(THEME_KEY, theme);
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute("data-theme") || "dark";
+  const next = current === "dark" ? "light" : "dark";
+  applyTheme(next);
+  showToast(`已切换到${next === "dark" ? "深色" : "浅色"}主题`, "info");
+}
+
+/* ═══════════ 键盘快捷键 ═══════════ */
+document.addEventListener("keydown", (e) => {
+  // Ctrl/Cmd + K 打开搜索
+  if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+    e.preventDefault();
+    const searchInput = document.getElementById("search-input");
+    if (searchInput) searchInput.focus();
+  }
+  
+  // ESC 关闭模态框
+  if (e.key === "Escape") {
+    const modal = document.getElementById("detail-modal");
+    if (modal && modal.open) modal.close();
+  }
+  
+  // 数字键切换视图
+  if (e.altKey && e.key >= "1" && e.key <= "6") {
+    e.preventDefault();
+    const views = ["dashboard", "releases", "create", "escalations", "webhooks", "policy"];
+    const idx = parseInt(e.key) - 1;
+    if (views[idx]) switchView(views[idx]);
+  }
+});
+
+/* ═══════════ 页面加载完成后初始化 ═══════════ */
+document.addEventListener("DOMContentLoaded", () => {
+  initTheme();
+  startAutoRefresh();
+});
