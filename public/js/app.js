@@ -84,7 +84,8 @@ function switchView(view) {
     create: ["创建发布", "新建发布审批请求"],
     escalations: ["升级告警", "运营风险监控"],
     webhooks: ["Webhook 管理", "事件订阅与日志"],
-    policy: ["治理策略", "审批路由与规则配置"]
+    policy: ["治理策略", "审批路由与规则配置"],
+    audit: ["审计日志", "操作记录和状态变更历史"]
   };
   const [title, subtitle] = titles[view] || [view, ""];
   document.getElementById("page-title").textContent = title;
@@ -104,6 +105,7 @@ function refreshCurrentView() {
     case "escalations": loadEscalations(); break;
     case "webhooks": loadWebhooks(); break;
     case "policy": loadPolicy(); break;
+    case "audit": loadAuditLog(); break;
   }
 }
 
@@ -731,6 +733,136 @@ async function loadPolicy() {
   } catch (e) {
     console.error("治理策略加载失败:", e);
   }
+}
+
+/* ═══════════ 审计日志 ═══════════ */
+async function loadAuditLog() {
+  try {
+    const { data, pagination: p } = await apiFetch("/api/audit?limit=50");
+    
+    const tbody = document.getElementById("audit-tbody");
+    if (!data || data.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" class="empty-state">
+            <div class="empty-state-title">暂无审计记录</div>
+            <div class="empty-state-description">系统操作将自动记录</div>
+          </td>
+        </tr>`;
+      return;
+    }
+    
+    const eventLabels = {
+      "release.created": { label: "创建发布", color: "var(--status-info)" },
+      "release.approved": { label: "审批通过", color: "var(--status-ok)" },
+      "release.rejected": { label: "审批拒绝", color: "var(--status-error)" },
+      "release.deployed": { label: "部署完成", color: "var(--status-sync)" },
+      "release.scheduled": { label: "已排期", color: "var(--status-warn)" },
+      "release.rolled_back": { label: "已回滚", color: "var(--status-error)" },
+      "webhook.subscribed": { label: "订阅 Webhook", color: "var(--status-info)" },
+      "webhook.removed": { label: "移除 Webhook", color: "var(--status-error)" },
+      "releases.bulk_created": { label: "批量创建", color: "var(--status-info)" }
+    };
+    
+    tbody.innerHTML = data.map(entry => {
+      const eventConfig = eventLabels[entry.event] || { label: entry.event, color: "var(--text-muted)" };
+      
+      return `
+        <tr>
+          <td style="white-space: nowrap;">${formatDate(entry.timestamp)}</td>
+          <td>
+            <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: ${eventConfig.color}15; border-radius: 16px; font-size: 0.85rem; color: ${eventConfig.color};">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: ${eventConfig.color};"></span>
+              ${eventConfig.label}
+            </span>
+          </td>
+          <td>${escapeHtml(entry.actor)}</td>
+          <td>${entry.resourceType || "—"}</td>
+          <td>
+            <button class="btn btn-ghost btn-sm" onclick="showAuditDetail(${JSON.stringify(entry).replace(/"/g, '&quot;')})">
+              查看
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+    
+    // 渲染分页
+    if (p) {
+      renderAuditPagination(p);
+    }
+  } catch (e) {
+    console.error("审计日志加载失败:", e);
+  }
+}
+
+function renderAuditPagination(p) {
+  const container = document.getElementById("audit-pagination");
+  if (!container || !p) return;
+  
+  const totalPages = Math.ceil(p.total / p.limit);
+  const currentPage = Math.floor(p.offset / p.limit) + 1;
+  
+  if (totalPages <= 1) {
+    container.innerHTML = "";
+    return;
+  }
+  
+  let html = '<button class="pagination-btn" onclick="goToAuditPage(' + (currentPage - 1) + ')" ' + (currentPage <= 1 ? 'disabled' : '') + '>上一页</button>';
+  
+  for (let i = 1; i <= Math.min(totalPages, 5); i++) {
+    html += `<button class="pagination-btn ${i === currentPage ? 'active' : ''}" onclick="goToAuditPage(${i})">${i}</button>`;
+  }
+  
+  html += '<button class="pagination-btn" onclick="goToAuditPage(' + (currentPage + 1) + ')" ' + (currentPage >= totalPages ? 'disabled' : '') + '>下一页</button>';
+  
+  container.innerHTML = html;
+}
+
+let auditPagination = { offset: 0, limit: 50 };
+
+function goToAuditPage(page) {
+  auditPagination.offset = (page - 1) * auditPagination.limit;
+  loadAuditLog();
+}
+
+function showAuditDetail(entry) {
+  const body = `
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div>
+        <div class="form-label">事件 ID</div>
+        <div style="font-family: var(--font-mono); font-size: 0.85rem; word-break: break-all;">${entry.id}</div>
+      </div>
+      <div>
+        <div class="form-label">时间</div>
+        <div>${new Date(entry.timestamp).toLocaleString("zh-CN")}</div>
+      </div>
+      <div>
+        <div class="form-label">事件类型</div>
+        <div>${entry.event}</div>
+      </div>
+      <div>
+        <div class="form-label">操作者</div>
+        <div>${escapeHtml(entry.actor)}</div>
+      </div>
+      <div>
+        <div class="form-label">资源类型</div>
+        <div>${entry.resourceType || "—"}</div>
+      </div>
+      <div>
+        <div class="form-label">资源 ID</div>
+        <div style="font-family: var(--font-mono); font-size: 0.85rem; word-break: break-all;">${entry.resourceId || "—"}</div>
+      </div>
+    </div>
+    ${entry.details && Object.keys(entry.details).length > 0 ? `
+      <div style="margin-top: 20px;">
+        <div class="form-label">详细信息</div>
+        <pre style="padding: 12px; background: var(--bg-raised); border-radius: 8px; font-family: var(--font-mono); font-size: 0.85rem; overflow-x: auto; margin-top: 8px;">${JSON.stringify(entry.details, null, 2)}</pre>
+      </div>
+    ` : ""}
+  `;
+  
+  showModal(`审计详情: ${entry.event}`, body);
 }
 
 /* ═══════════ WebSocket 实时推送 ═══════════ */
