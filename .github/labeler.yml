@@ -1,0 +1,26 @@
+# 标签规则
+src:
+  - changed-files:
+    - any-glob-to-any-file: src/**
+
+tests:
+  - changed-files:
+    - any-glob-to-any-file: tests/**
+
+docs:
+  - changed-files:
+    - any-glob-to-any-file: docs/**
+    - any-glob-to-any-file: '*.md'
+
+infrastructure:
+  - changed-files:
+    - any-glob-to-any-file: .github/**
+    - any-glob-to-any-file: Dockerfile
+    - any-glob-to-any-file: docker-compose.yml
+    - any-glob-to-any-file: k8s/**
+    - any-glob-to-any-file: helm/**
+
+api:
+  - changed-files:
+    - any-glob-to-any-file: openapi/**
+    - any-glob-to-any-file: src/app.js

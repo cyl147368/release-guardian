@@ -1,0 +1,20 @@
+# 默认代码所有者
+* @cyl147368
+
+# 源代码
+/src/ @cyl147368
+/tests/ @cyl147368
+
+# 文档
+/docs/ @cyl147368
+*.md @cyl147368
+
+# 基础设施
+/.github/ @cyl147368
+/Dockerfile @cyl147368
+/docker-compose.yml @cyl147368
+/k8s/ @cyl147368
+/helm/ @cyl147368
+
+# API 合约
+/openapi/ @cyl147368

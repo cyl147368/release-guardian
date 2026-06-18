@@ -545,7 +545,7 @@ The automated test suite also checks that the OpenAPI contract continues to decl
 
 ## 13. Testing Strategy
 
-The project includes 135 automated tests across 19 test suites:
+The project includes 146 automated tests across 25 test suites:
 
 - Service-layer lifecycle tests (create, list, get, filter, paginate)
 - Approval workflow tests (approve, reject, SLA tracking)
@@ -565,7 +565,7 @@ The project includes 135 automated tests across 19 test suites:
 - Time and validation utility tests
 - OpenAPI contract guardrail tests (all 17 endpoints, schemas, response codes)
 
-Coverage: 94.12% line coverage, 86.50% branch coverage, 95.38% function coverage.
+Coverage: 94.12% line coverage, 86.50% branch coverage, 95.38% function coverage. Coverage threshold: 80%.
 
 ## 14. Operational Concerns
 
@@ -601,7 +601,7 @@ Suggested production hardening:
 ## 15. Delivery Contents
 
 - Source code (11 source modules)
-- Test suite (135 tests, 94.12% line coverage)
+- Test suite (146 tests, 94.12% line coverage, 25 test suites)
 - Multi-stage Dockerfile with non-root user and health check
 - docker-compose.yml (production + development profiles)
 - GitHub Actions CI (multi-Node matrix, coverage threshold, OpenAPI contract tests)
@@ -616,6 +616,9 @@ Suggested production hardening:
 - Seed data with 5 diverse demo releases
 - Multilingual documentation (EN, zh-CN, zh-TW, JA, KO)
 - Architecture Decision Records (ADR)
+- API 变更日志
+- GitHub issue/PR 模板
+- CODEOWNERS 和自动标签
 
 ## 16. Multilingual Overview
 
