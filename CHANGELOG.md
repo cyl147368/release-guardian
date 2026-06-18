@@ -15,11 +15,14 @@ All notable changes to this project are documented in this file.
 - Evidence package tests for traceability, conflict visibility, and remediation guidance
 - Scheduling now blocks releases with active release-window conflicts
 - Service and API tests for the scheduling conflict gate
+- Schema-rich OpenAPI contract with reusable request, response, governance, reporting, and error schemas
+- OpenAPI contract guardrail tests
 
 ### Changed
 
 - OpenAPI, README, and package metadata now describe the expanded reporting and evidence surface
 - Release-window conflict payloads now include the conflicting release version
+- The lint script now syntax-checks the OpenAPI contract test
 
 ## 1.2.0 - 2026-06-18
 

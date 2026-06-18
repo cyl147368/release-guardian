@@ -5,168 +5,983 @@ info:
   description: Enterprise-grade release governance and audit API.
 servers:
   - url: http://localhost:3000
+tags:
+  - name: Health
+  - name: Releases
+  - name: Governance
+  - name: Reporting
 paths:
   /health:
     get:
+      tags: [Health]
       summary: Health probe
       responses:
         "200":
           description: Healthy
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: ok
   /api/releases:
     get:
+      tags: [Releases]
       summary: List releases
       parameters:
-        - in: query
-          name: environment
-          schema:
-            type: string
-            enum: [development, staging, production]
-        - in: query
-          name: status
-          schema:
-            type: string
-            enum: [draft, pending_approval, approved, rejected, scheduled, deployed, rolled_back]
-        - in: query
-          name: riskBand
-          schema:
-            type: string
-            enum: [low, medium, high, critical]
-        - in: query
-          name: application
-          schema:
-            type: string
-        - in: query
-          name: owner
-          schema:
-            type: string
-        - in: query
-          name: pendingApprovals
-          schema:
-            type: boolean
-        - in: query
-          name: sort
-          schema:
-            type: string
-            enum: [createdAt, updatedAt, riskScore, application, environment]
-        - in: query
-          name: order
-          schema:
-            type: string
-            enum: [asc, desc]
-        - in: query
-          name: limit
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-        - in: query
-          name: offset
-          schema:
-            type: integer
-            minimum: 0
+        - $ref: "#/components/parameters/EnvironmentFilter"
+        - $ref: "#/components/parameters/StatusFilter"
+        - $ref: "#/components/parameters/RiskBandFilter"
+        - $ref: "#/components/parameters/ApplicationFilter"
+        - $ref: "#/components/parameters/OwnerFilter"
+        - $ref: "#/components/parameters/PendingApprovalsFilter"
+        - $ref: "#/components/parameters/SortFilter"
+        - $ref: "#/components/parameters/OrderFilter"
+        - $ref: "#/components/parameters/LimitFilter"
+        - $ref: "#/components/parameters/OffsetFilter"
       responses:
         "200":
           description: Release list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReleaseListResponse"
     post:
+      tags: [Releases]
       summary: Create a release
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReleaseRequest"
+            example:
+              application: billing-api
+              version: "2026.06.18"
+              environment: production
+              serviceTier: tier_1
+              changeCategory: normal
+              plannedStartAt: "2026-06-20T08:00:00.000Z"
+              plannedEndAt: "2026-06-20T09:00:00.000Z"
+              summary: Enable a new reconciliation workflow for enterprise invoices.
+              components: [api, worker, scheduler]
+              owner: alice
+              controls:
+                automatedTestsPassed: true
+                rollbackReady: true
+                monitoringReady: true
+                securityReviewed: true
+                customerImpactScore: 4
+                dataSensitivityScore: 5
       responses:
         "201":
           description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReleaseResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
   /api/releases/{releaseId}:
     get:
+      tags: [Releases]
       summary: Get release by ID
       parameters:
-        - in: path
-          name: releaseId
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/ReleaseId"
       responses:
         "200":
           description: Release payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReleaseResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/releases/{releaseId}/evidence:
     get:
+      tags: [Governance]
       summary: Retrieve audit evidence package for a release
       description: Returns control evidence, approval evidence, deployment outcome evidence, stable evidence identifiers, conflict checks, escalation flags, and remediation actions.
       parameters:
-        - in: path
-          name: releaseId
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/ReleaseId"
       responses:
         "200":
           description: Evidence package
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvidencePackageResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/releases/{releaseId}/conflicts:
     get:
+      tags: [Governance]
       summary: Retrieve release-window conflicts for a release
       parameters:
-        - in: path
-          name: releaseId
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/ReleaseId"
       responses:
         "200":
           description: Release-window conflict report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictReportResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/releases/{releaseId}/approvals:
     post:
+      tags: [Governance]
       summary: Approve or reject a release
       parameters:
-        - in: path
-          name: releaseId
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/ReleaseId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewReleaseRequest"
       responses:
         "200":
           description: Updated release
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReleaseResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /api/releases/{releaseId}/schedule:
     post:
+      tags: [Governance]
       summary: Schedule an approved release
       description: Rejects the schedule request with `409 release_window_conflict` when the release overlaps another active release window.
       parameters:
-        - in: path
-          name: releaseId
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/ReleaseId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleReleaseRequest"
       responses:
         "200":
           description: Scheduled release
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReleaseResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /api/releases/{releaseId}/deploy:
     post:
+      tags: [Releases]
       summary: Record deployment outcome
       parameters:
-        - in: path
-          name: releaseId
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/ReleaseId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeployReleaseRequest"
       responses:
         "200":
           description: Deployment result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReleaseResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /api/dashboard:
     get:
+      tags: [Reporting]
       summary: Retrieve governance dashboard
       responses:
         "200":
           description: Dashboard payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardResponse"
   /api/escalations:
     get:
+      tags: [Reporting]
       summary: Retrieve operational escalation summary
       responses:
         "200":
           description: Escalation summary for overdue approvals, high-risk pending releases, and release-window conflicts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EscalationsResponse"
   /api/escalations/report:
     get:
+      tags: [Reporting]
       summary: Retrieve executive escalation report
       responses:
         "200":
           description: Auditable escalation report with executive summary, severity counts, recommended actions, and machine-readable rows
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EscalationReportResponse"
   /api/policy:
     get:
+      tags: [Governance]
       summary: Retrieve release governance policy
       responses:
         "200":
           description: Policy payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyResponse"
+components:
+  parameters:
+    ReleaseId:
+      in: path
+      name: releaseId
+      required: true
+      schema:
+        type: string
+      description: Release identifier.
+    EnvironmentFilter:
+      in: query
+      name: environment
+      schema:
+        $ref: "#/components/schemas/Environment"
+    StatusFilter:
+      in: query
+      name: status
+      schema:
+        $ref: "#/components/schemas/ReleaseStatus"
+    RiskBandFilter:
+      in: query
+      name: riskBand
+      schema:
+        $ref: "#/components/schemas/RiskBand"
+    ApplicationFilter:
+      in: query
+      name: application
+      schema:
+        type: string
+    OwnerFilter:
+      in: query
+      name: owner
+      schema:
+        type: string
+    PendingApprovalsFilter:
+      in: query
+      name: pendingApprovals
+      schema:
+        type: boolean
+    SortFilter:
+      in: query
+      name: sort
+      schema:
+        type: string
+        enum: [createdAt, updatedAt, riskScore, application, environment]
+    OrderFilter:
+      in: query
+      name: order
+      schema:
+        type: string
+        enum: [asc, desc]
+    LimitFilter:
+      in: query
+      name: limit
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+    OffsetFilter:
+      in: query
+      name: offset
+      schema:
+        type: integer
+        minimum: 0
+  responses:
+    BadRequest:
+      description: Invalid request body or query parameter.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: Request conflicts with the current release state or governance policy.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    Environment:
+      type: string
+      enum: [development, staging, production]
+    ReleaseStatus:
+      type: string
+      enum: [draft, pending_approval, approved, rejected, scheduled, deployed, rolled_back]
+    ApprovalStatus:
+      type: string
+      enum: [pending, approved, rejected]
+    RiskBand:
+      type: string
+      enum: [low, medium, high, critical]
+    ApiEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data: {}
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              examples: [validation_error, not_found, invalid_state, release_window_conflict]
+            message:
+              type: string
+            details:
+              type: object
+    CreateReleaseRequest:
+      type: object
+      required:
+        - application
+        - version
+        - environment
+        - serviceTier
+        - changeCategory
+        - plannedStartAt
+        - plannedEndAt
+        - summary
+        - components
+        - owner
+        - controls
+      properties:
+        application:
+          type: string
+        version:
+          type: string
+        environment:
+          $ref: "#/components/schemas/Environment"
+        serviceTier:
+          type: string
+          enum: [tier_1, tier_2, tier_3]
+        changeCategory:
+          type: string
+          enum: [standard, normal, emergency]
+        plannedStartAt:
+          type: string
+          format: date-time
+        plannedEndAt:
+          type: string
+          format: date-time
+        summary:
+          type: string
+        components:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        owner:
+          type: string
+        controls:
+          $ref: "#/components/schemas/Controls"
+    Controls:
+      type: object
+      required:
+        - automatedTestsPassed
+        - rollbackReady
+        - monitoringReady
+        - securityReviewed
+        - customerImpactScore
+        - dataSensitivityScore
+      properties:
+        automatedTestsPassed:
+          type: boolean
+        rollbackReady:
+          type: boolean
+        monitoringReady:
+          type: boolean
+        securityReviewed:
+          type: boolean
+        customerImpactScore:
+          type: integer
+          minimum: 0
+          maximum: 5
+        dataSensitivityScore:
+          type: integer
+          minimum: 0
+          maximum: 5
+    ReviewReleaseRequest:
+      type: object
+      required: [team, actor, decision]
+      properties:
+        team:
+          type: string
+        actor:
+          type: string
+        decision:
+          type: string
+          enum: [approved, rejected]
+        comment:
+          type: string
+    ScheduleReleaseRequest:
+      type: object
+      required: [actor, scheduledAt]
+      properties:
+        actor:
+          type: string
+        scheduledAt:
+          type: string
+          format: date-time
+        rollbackPlan:
+          type: string
+    DeployReleaseRequest:
+      type: object
+      required: [actor, outcome]
+      properties:
+        actor:
+          type: string
+        outcome:
+          type: string
+          enum: [deployed, rolled_back]
+        startedAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: string
+          format: date-time
+    Release:
+      type: object
+      required:
+        - id
+        - application
+        - version
+        - environment
+        - serviceTier
+        - changeCategory
+        - status
+        - risk
+        - approvals
+        - timeline
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        application:
+          type: string
+        version:
+          type: string
+        environment:
+          $ref: "#/components/schemas/Environment"
+        serviceTier:
+          type: string
+          enum: [tier_1, tier_2, tier_3]
+        changeCategory:
+          type: string
+          enum: [standard, normal, emergency]
+        plannedStartAt:
+          type: string
+          format: date-time
+        plannedEndAt:
+          type: string
+          format: date-time
+        summary:
+          type: string
+        components:
+          type: array
+          items:
+            type: string
+        controls:
+          $ref: "#/components/schemas/Controls"
+        conflicts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReleaseConflict"
+        owner:
+          type: string
+        status:
+          $ref: "#/components/schemas/ReleaseStatus"
+        risk:
+          $ref: "#/components/schemas/Risk"
+        approvals:
+          type: array
+          items:
+            $ref: "#/components/schemas/Approval"
+        deployment:
+          anyOf:
+            - $ref: "#/components/schemas/Deployment"
+            - type: "null"
+        timeline:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimelineEvent"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Risk:
+      type: object
+      required: [score, band, rationale]
+      properties:
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        band:
+          $ref: "#/components/schemas/RiskBand"
+        rationale:
+          type: string
+    Approval:
+      type: object
+      required: [team, displayName, status, requestedAt, slaHours, slaBreached]
+      properties:
+        team:
+          type: string
+        displayName:
+          type: string
+        status:
+          $ref: "#/components/schemas/ApprovalStatus"
+        actor:
+          anyOf:
+            - type: string
+            - type: "null"
+        comment:
+          type: string
+        requestedAt:
+          type: string
+          format: date-time
+        updatedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        slaHours:
+          type: integer
+        slaBreached:
+          type: boolean
+    Deployment:
+      type: object
+      properties:
+        scheduledAt:
+          type: string
+          format: date-time
+        startedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        finishedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        executedBy:
+          type: string
+        rollbackPlan:
+          type: string
+        outcome:
+          type: string
+          enum: [scheduled, deployed, rolled_back]
+    TimelineEvent:
+      type: object
+      required: [at, type, actor, detail]
+      properties:
+        at:
+          type: string
+          format: date-time
+        type:
+          type: string
+        actor:
+          type: string
+        detail:
+          type: string
+    ReleaseConflict:
+      type: object
+      required:
+        - releaseId
+        - application
+        - version
+        - environment
+        - status
+        - plannedStartAt
+        - plannedEndAt
+        - owner
+        - riskBand
+        - reason
+      properties:
+        releaseId:
+          type: string
+        application:
+          type: string
+        version:
+          type: string
+        environment:
+          $ref: "#/components/schemas/Environment"
+        status:
+          $ref: "#/components/schemas/ReleaseStatus"
+        plannedStartAt:
+          type: string
+          format: date-time
+        plannedEndAt:
+          type: string
+          format: date-time
+        owner:
+          type: string
+        riskBand:
+          $ref: "#/components/schemas/RiskBand"
+        reason:
+          type: string
+    EvidencePackage:
+      type: object
+      required:
+        - evidencePackageId
+        - generatedAt
+        - releaseId
+        - summary
+        - evidence
+        - conflicts
+        - escalationFlags
+        - remediationActions
+        - timeline
+      properties:
+        evidencePackageId:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        releaseId:
+          type: string
+        application:
+          type: string
+        version:
+          type: string
+        environment:
+          $ref: "#/components/schemas/Environment"
+        status:
+          $ref: "#/components/schemas/ReleaseStatus"
+        risk:
+          $ref: "#/components/schemas/Risk"
+        summary:
+          type: object
+          required: [totalControls, passedControls, failedControls, openConflicts, escalationFlags, auditReady]
+          properties:
+            totalControls:
+              type: integer
+            passedControls:
+              type: integer
+            failedControls:
+              type: integer
+            openConflicts:
+              type: integer
+            escalationFlags:
+              type: integer
+            auditReady:
+              type: boolean
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/EvidenceItem"
+        conflicts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReleaseConflict"
+        escalationFlags:
+          type: array
+          items:
+            $ref: "#/components/schemas/EscalationFlag"
+        remediationActions:
+          type: array
+          items:
+            $ref: "#/components/schemas/RemediationAction"
+        timeline:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimelineEvent"
+    EvidenceItem:
+      type: object
+      required: [evidenceId, control, passed, status]
+      properties:
+        evidenceId:
+          type: string
+        control:
+          type: string
+        displayName:
+          type: string
+        passed:
+          type: boolean
+        status:
+          type: string
+        actor:
+          anyOf:
+            - type: string
+            - type: "null"
+        requestedAt:
+          type: string
+          format: date-time
+        updatedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        slaHours:
+          type: integer
+        slaBreached:
+          type: boolean
+        comment:
+          type: string
+        value:
+          type: integer
+        description:
+          type: string
+        deployment:
+          anyOf:
+            - $ref: "#/components/schemas/Deployment"
+            - type: "null"
+    EscalationFlag:
+      type: object
+      required: [code, severity, detail, teams, detectedAt]
+      properties:
+        code:
+          type: string
+          enum: [approval_sla_breached, high_risk_pending_approval, release_window_conflict]
+        severity:
+          type: string
+          enum: [critical, high, medium, low]
+        detail:
+          type: string
+        teams:
+          type: array
+          items:
+            type: string
+        detectedAt:
+          type: string
+          format: date-time
+    RemediationAction:
+      type: object
+      required: [priority, owner, action]
+      properties:
+        priority:
+          type: string
+          enum: [P0, P1, P2, P3]
+        owner:
+          type: string
+        action:
+          type: string
+    ConflictReport:
+      type: object
+      required: [generatedAt, releaseId, application, environment, plannedStartAt, plannedEndAt, totalConflicts, conflicts]
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+        releaseId:
+          type: string
+        application:
+          type: string
+        environment:
+          $ref: "#/components/schemas/Environment"
+        plannedStartAt:
+          type: string
+          format: date-time
+        plannedEndAt:
+          type: string
+          format: date-time
+        totalConflicts:
+          type: integer
+        conflicts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReleaseConflict"
+    Dashboard:
+      type: object
+      required: [generatedAt, totalReleases, byStatus, byEnvironment, riskDistribution, approvalSlaBreaches, changeFailureRate, averageLeadHours]
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+        totalReleases:
+          type: integer
+        byStatus:
+          type: object
+          additionalProperties:
+            type: integer
+        byEnvironment:
+          type: object
+          additionalProperties:
+            type: integer
+        riskDistribution:
+          type: object
+          additionalProperties:
+            type: integer
+        approvalSlaBreaches:
+          type: integer
+        changeFailureRate:
+          type: number
+        averageLeadHours:
+          type: number
+    Escalations:
+      type: object
+      required: [generatedAt, counts, overdueApprovals, highRiskPending, conflictRisks]
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+        counts:
+          type: object
+          required: [overdueApprovals, highRiskPending, conflictRisks]
+          properties:
+            overdueApprovals:
+              type: integer
+            highRiskPending:
+              type: integer
+            conflictRisks:
+              type: integer
+        overdueApprovals:
+          type: array
+          items:
+            type: object
+        highRiskPending:
+          type: array
+          items:
+            type: object
+        conflictRisks:
+          type: array
+          items:
+            type: object
+    EscalationReport:
+      type: object
+      required: [reportId, generatedAt, title, executiveSummary, recommendedActions, rows]
+      properties:
+        reportId:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        title:
+          type: string
+        executiveSummary:
+          type: object
+        recommendedActions:
+          type: array
+          items:
+            $ref: "#/components/schemas/RemediationAction"
+        rows:
+          type: array
+          items:
+            type: object
+    Policy:
+      type: object
+      required: [generatedAt, environments, releaseStatuses, approvalStatuses, serviceTiers, riskBands, approvalRouting, controlScoreBounds]
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+        environments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Environment"
+        releaseStatuses:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReleaseStatus"
+        approvalStatuses:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApprovalStatus"
+        serviceTiers:
+          type: array
+          items:
+            type: object
+        riskBands:
+          type: array
+          items:
+            type: object
+        approvalRouting:
+          type: array
+          items:
+            type: object
+        controlScoreBounds:
+          type: object
+    ReleaseResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Release"
+    ReleaseListResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/Release"
+    EvidencePackageResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/EvidencePackage"
+    ConflictReportResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/ConflictReport"
+    DashboardResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Dashboard"
+    EscalationsResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Escalations"
+    EscalationReportResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/EscalationReport"
+    PolicyResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Policy"

@@ -23,7 +23,7 @@ The project is intentionally implemented with modern built-in Node.js capabiliti
 - Audit timeline for every important action
 - Dashboard metrics for governance and change performance
 - Executive escalation reports with stable audit identifiers
-- OpenAPI contract for downstream integration
+- Schema-rich OpenAPI contract for downstream integration
 - Containerized runtime and CI workflow
 - Multilingual documentation for global teams
 
@@ -380,6 +380,8 @@ npm run test:coverage
 npm run test:bootstrap
 ```
 
+The automated test suite also checks that the OpenAPI contract continues to declare every public route, core request/response schema, error model, and governance-specific evidence fields.
+
 ## 13. Testing Strategy
 
 The project currently includes:
@@ -395,6 +397,7 @@ The project currently includes:
 - Release-window conflict tests
 - Operational escalation tests
 - Executive escalation report tests
+- OpenAPI contract guardrail tests
 
 Recommended next-stage additions:
 
