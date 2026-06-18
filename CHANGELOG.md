@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented in this file.
 
+## 1.8.1 - 2026-06-18
+
+### Added
+
+- Comprehensive multilingual README translations (322-554 lines each)
+  - `docs/README.zh-CN.md` (简体中文)
+  - `docs/README.zh-TW.md` (繁体中文)
+  - `docs/README.ja.md` (日本語)
+  - `docs/README.ko.md` (한국어)
+- Each translation covers: architecture, API surface, deployment, error model, environment variables, testing strategy, and repository layout
+
+### Changed
+
+- All multilingual READMEs now match the English README in depth and structure
+
 ## 1.8.0 - 2026-06-18
 
 ### Added
