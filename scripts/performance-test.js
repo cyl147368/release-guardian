@@ -10,6 +10,9 @@ import { createApp } from "../src/app.js";
 import { Repository } from "../src/repository.js";
 import { ReleaseService } from "../src/services/releaseService.js";
 import { Readable } from "node:stream";
+import { mkdtemp } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 function buildRequest(method, url, body) {
   const stream = Readable.from(body ? [JSON.stringify(body)] : []);
