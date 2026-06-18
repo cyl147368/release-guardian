@@ -425,3 +425,55 @@ test("returns 404 for unknown paths", async () => {
   const body = JSON.parse(response.body);
   assert.equal(body.error.code, "not_found");
 });
+
+// 边界情况和错误路径测试
+test("POST /api/releases with missing fields returns 400", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("POST", "/api/releases", { application: "test" }));
+  assert.equal(response.statusCode, 400);
+  const body = JSON.parse(response.body);
+  assert.equal(body.error.code, "validation_error");
+});
+
+test("POST /api/releases with invalid JSON returns 400", async () => {
+  const app = await createFixtureApp();
+  const stream = Readable.from(["not json {{{"]);
+  stream.method = "POST";
+  stream.url = "/api/releases";
+  const response = await app(stream);
+  assert.equal(response.statusCode, 400);
+  const body = JSON.parse(response.body);
+  assert.equal(body.error.code, "invalid_json");
+});
+
+test("GET /api/releases/:id with nonexistent id returns 404", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("GET", "/api/releases/nonexistent-id"));
+  assert.equal(response.statusCode, 404);
+  const body = JSON.parse(response.body);
+  assert.equal(body.error.code, "not_found");
+});
+
+test("GET /api/releases returns pagination metadata", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("GET", "/api/releases"));
+  const body = JSON.parse(response.body);
+  assert.equal(response.statusCode, 200);
+  assert.ok(body.pagination);
+  assert.equal(typeof body.pagination.total, "number");
+  assert.equal(typeof body.pagination.limit, "number");
+  assert.equal(typeof body.pagination.offset, "number");
+  assert.equal(typeof body.pagination.hasMore, "boolean");
+});
+
+test("POST /api/releases/bulk with empty array returns 400", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("POST", "/api/releases/bulk", { releases: [] }));
+  assert.equal(response.statusCode, 400);
+});
+
+test("POST /api/webhooks without url returns 400", async () => {
+  const app = await createFixtureApp();
+  const response = await app(buildRequest("POST", "/api/webhooks", { events: ["*"] }));
+  assert.equal(response.statusCode, 400);
+});

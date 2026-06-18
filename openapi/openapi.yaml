@@ -16,6 +16,7 @@ paths:
     get:
       tags: [Health]
       summary: Health probe
+      description: Returns a plain-text health response for load balancer liveness checks.
       responses:
         "200":
           description: Healthy
@@ -36,6 +37,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReadinessResponse"
+              example:
+                data:
+                  status: ready
+                  generatedAt: "2026-06-18T12:00:00.000Z"
+                  version: "2.0.0"
+                  checks:
+                    datastore:
+                      status: ok
+                      releaseCount: 42
+                      teamCount: 3
         "503":
           description: Service is not ready
           content:
@@ -119,6 +130,25 @@ paths:
                   items:
                     $ref: "#/components/schemas/CreateReleaseRequest"
               required: [releases]
+            example:
+              releases:
+                - application: billing-api
+                  version: "2026.06.18"
+                  environment: production
+                  serviceTier: tier_1
+                  changeCategory: normal
+                  plannedStartAt: "2026-06-20T08:00:00.000Z"
+                  plannedEndAt: "2026-06-20T09:00:00.000Z"
+                  summary: "Invoice reconciliation update"
+                  components: [api, worker]
+                  owner: alice
+                  controls:
+                    automatedTestsPassed: true
+                    rollbackReady: true
+                    monitoringReady: true
+                    securityReviewed: true
+                    customerImpactScore: 4
+                    dataSensitivityScore: 5
       responses:
         "201":
           description: Bulk creation result
@@ -258,6 +288,7 @@ paths:
     get:
       tags: [Reporting]
       summary: Retrieve governance dashboard
+      description: Returns aggregated governance metrics including release counts, risk distribution, approval SLA breaches, and change performance indicators.
       responses:
         "200":
           description: Dashboard payload
@@ -269,6 +300,7 @@ paths:
     get:
       tags: [Reporting]
       summary: Retrieve operational escalation summary
+      description: Returns overdue approvals, high-risk pending releases, and release-window conflicts that require immediate attention.
       responses:
         "200":
           description: Escalation summary for overdue approvals, high-risk pending releases, and release-window conflicts
